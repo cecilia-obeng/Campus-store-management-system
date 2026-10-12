@@ -1,0 +1,9 @@
+{
+  "name": "campus-store-frontend",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "echo 'React UI pending...' && tail -f /dev/null"
+  }
+}
+
+# Cecilla you can overwrite this file later
