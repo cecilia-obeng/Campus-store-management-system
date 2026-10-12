@@ -1,4 +1,9 @@
---rollback;
+-- CAMPUS STORE SALES TRACKER | STEP 2
+-- Sample dataset for the Step 1 tables: categories, products, sales.
+-- Run once against campus_store_db in pgAdmin Query Tool.
+-- Currency: illustrative project currency units; confirm the reporting currency with the team.
+-- Assumes the three tables exist and contain no records.
+
 BEGIN;
 
 -- Fail safely rather than silently duplicating data on a second run.
@@ -72,7 +77,7 @@ SELECT
     p.product_id,
     1 + ((n.n * 11 + (n.n / 5)) % 3) AS quantity,
     p.unit_price AS unit_price_at_sale,
-    CURRENT_TIMESTAMP - ((201 - n.n) * INTERVAL '6 hours') AS sold_at,
+    CURRENT_TIMESTAMP - ((201 - n.n) * INTERVAL '6 hours') AS sale_date,
     CASE (n.n % 3)
         WHEN 0 THEN 'cash'
         WHEN 1 THEN 'card'
@@ -97,11 +102,11 @@ WHERE p.product_id = d.product_id;
 
 -- 5. Insert the exact same staged sales into the permanent sales table.
 INSERT INTO sales
-    (product_id, quantity, unit_price_at_sale, sold_at, payment_method, status)
+    (product_id, quantity, unit_price_at_sale, sale_date, payment_method, status)
 SELECT product_id, quantity, unit_price_at_sale,
-       sold_at, payment_method, status
+       sale_date, payment_method, status
 FROM seed_sales
-ORDER BY sold_at;
+ORDER BY sale_date;
 
 -- 6. Validate counts, totals, and opening-stock reconciliation before commit.
 DO $$
