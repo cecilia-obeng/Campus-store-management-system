@@ -1,5 +1,3 @@
--- Campus Store Sales Tracker: schema for a NEW, EMPTY database.
--- Run before seed.sql. Do not run against your populated database.
 BEGIN;
 CREATE TABLE categories (
     category_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -28,6 +26,6 @@ CREATE TABLE sales (
     status VARCHAR(20) NOT NULL DEFAULT 'completed',
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_payment_method CHECK (payment_method IN ('cash','card','mobile_money')),
-    CONSTRAINT chk_sale_status CHECK (status IN ('completed','voided'))
+    CONSTRAINT chk_sale_status CHECK (status IN ('completed','cancelled'))
 );
 COMMIT;
