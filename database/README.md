@@ -2,82 +2,84 @@
 
 ## Overview
 
-This contribution provides the PostgreSQL database schema, sample sales dataset, and read-only verification queries for the Campus Store Management System. It supports product categories, product inventory, and individual product sales. Backend API endpoints and live sale/cancellation processing are outside the scope of these SQL files.
+The `database/` directory contains the PostgreSQL schema, development sample data, reporting queries, and database acceptance checks for the Campus Store Management System. The SQL implementation covers product categories, products, inventory quantities, and sales records.
 
 ## Repository structure
 
 ```text
 Campus-store-management-system/
 ├── database/
-│   ├── init.sql                     # Tables, constraints, indexes, timestamp trigger
-│   ├── seed.sql                     # Sample categories, products, and historical sales
-│   └── verify.sql                   # Read-only schema, inventory, and sales checks
-├── docs/
-│   ├── 04-database-schema.md        # Documented proposed database schema
-│   └── schema-alignment-report.md  # Differences, decisions, and open questions
-├── .gitignore
-└── README.md
+│   ├── README.md                            # Database implementation documentation
+│   ├── init.sql                             # Schema, constraints, indexes, and trigger
+│   ├── seed.sql                             # Development categories, products, and sales
+│   ├── verify.sql                           # Read-only reporting and inspection queries
+│   └── database_acceptance_verification.sql # Read-only acceptance assertions
+├── docs/                                    # Project documentation
+└── .gitignore
 ```
 
+## Implemented schema
 
-## Database tables
-
-| Table | Main columns | Purpose |
+| Table | Columns | Purpose |
 | --- | --- | --- |
-| `categories` | `id`, `name`, `description`, `created_at` | Product groupings. |
-| `products` | `id`, `name`, `category_id`, `price`, `stock_quantity`, `reorder_level`, `created_at`, `updated_at` | Catalogue, pricing, and current inventory. |
-| `sales` | `id`, `product_id`, `quantity`, `unit_price`, `payment_method`, `sale_date`, `created_at` | Individual product sales, including the unit price recorded at sale time. |
+| `categories` | `id`, `name`, `description`, `created_at` | Defines product categories. |
+| `products` | `id`, `name`, `category_id`, `price`, `stock_quantity`, `reorder_level`, `created_at`, `updated_at` | Stores the product catalogue, prices, and inventory. |
+| `sales` | `id`, `product_id`, `quantity`, `unit_price`, `payment_method`, `sale_date`, `created_at` | Records a product, quantity, payment method, and unit price for each sale. |
 
-One category can contain multiple products. One product can have multiple sales. Each sale row represents a single product and its quantity; there is no `sales_items` table.
+All three tables use integer identity primary keys. `products.category_id` references `categories.id`, and `sales.product_id` references `products.id`. Both foreign keys use `ON DELETE RESTRICT`. A sales record contains one product and a quantity; `unit_price` captures the sale-time price.
 
-The schema uses `INTEGER` identity primary keys named `id`; foreign keys remain `products.category_id` and `sales.product_id`. The sales timestamp column is `sale_date` (not `sold_at`).
+The schema does not include `products.is_active` or `sales.status`.
 
-## Integrity and inventory rules
+## Constraints, indexes, and trigger
 
-- Foreign keys protect the table relationships; a product with existing sales cannot be deleted.
-- Prices, stock quantities, and reorder levels cannot be negative; sale quantity must be positive.
-- Category and product names cannot be empty or padded with leading/trailing spaces.
-- Category names are unique with case-sensitive matching. Product names are unique **case-insensitively** across the catalogue.
-- Supported payment methods: `cash`, `card`, `mobile_money`.
-- `products.reorder_level` defaults to **10**. A product is at or below its reorder threshold when `stock_quantity <= reorder_level`.
-- Indexes support category filtering, sales lookup by product, and sales lookup by date.
-- A database trigger updates `products.updated_at` whenever a product row changes.
+| Database object | Implemented behaviour |
+| --- | --- |
+| `uq_categories_name` | Unique category names (case-sensitive). |
+| `chk_categories_name_trim`, `chk_products_name_trim` | Names are nonempty and contain no leading or trailing spaces. |
+| `uq_products_name_lower` | Unique product names regardless of letter case. |
+| `chk_products_price`, `chk_products_stock_quantity`, `chk_products_reorder_level` | Nonnegative prices, stock quantities, and reorder levels. |
+| `chk_sales_quantity`, `chk_sales_unit_price` | Positive sale quantities and nonnegative sale unit prices. |
+| `chk_sales_payment_method` | Payment method is `cash`, `card`, or `mobile_money`. |
+| `idx_products_category_id` | Index on product category. |
+| `idx_sales_product_id` | Index on the product referenced by each sale. |
+| `idx_sales_sale_date` | Index on sale date. |
+| `trg_products_updated_at` / `set_updated_at()` | Sets `products.updated_at` on product updates. |
 
-This proposed v1 schema **does not contain** `products.is_active` or `sales.status`. The proposed backend cancellation approach is to remove a sale and restore stock in one transaction, but that processing is **not implemented** in these SQL files and removes the permanent cancellation record. The trade-off is described in the alignment report.
+`products.reorder_level` defaults to `10`. The low-stock reporting query selects products for which `stock_quantity <= reorder_level`.
 
-## Sample dataset
+## Development sample data
 
-| Measure | Expected result after seeding a fresh database |
+`seed.sql` inserts six categories and 24 products, generates 200 historical sample sales, and deducts the recorded sales quantities from opening stock. Sale records are inserted in ascending `sale_date` order.
+
+| Measure | Seed-script expected total |
 | --- | ---: |
 | Categories | 6 |
 | Products | 24 |
 | Sales records | 200 |
 | Units sold | 402 |
-| Units remaining in stock | 2,043 |
+| Remaining units in stock | 2,043 |
 
-The fictional dataset covers beverages, campus merchandise, electronics, personal care, snacks, and stationery. Its prices are illustrative; the reporting currency has not been specified. The seed script includes deductions for its historical sales and checks stock reconciliation. **It does not install automatic stock deduction for future API sales.**
+The categories are Beverages, Campus Merchandise, Electronics, Personal Care, Snacks, and Stationery. Sample prices are illustrative; the SQL does not designate a currency.
 
-## Database setup and verification
+The seed runs in a transaction and refuses to insert sample data if any of the three tables already contains records. Before committing, it checks the record totals, units sold, remaining stock, and per-product inventory reconciliation. The SQL seed adjusts stock for its generated historical sales; it does not implement ongoing sale or cancellation processing.
 
-With PostgreSQL and a **new, empty database**, run these files in order:
+## SQL files and execution order
 
-1. `database/init.sql` — creates tables and integrity rules.
-2. `database/seed.sql` — loads sample data and adjusts the opening inventory to account for recorded sales.
-3. `database/verify.sql` — runs read-only count, column, low-stock, and top-product queries.
+On a new, empty database, execute:
 
-`seed.sql` intentionally stops if the three tables already contain rows, to avoid duplicating data. Do not rerun initialization or seed files against an existing populated database; those situations require a separately planned rebuild or migration.
+1. `init.sql` — creates the three tables, constraints, indexes, and product timestamp trigger.
+2. `seed.sql` — populates the sample data and reconciles inventory.
+3. `verify.sql` — returns dataset totals, selected column metadata, low-stock products, and the five products with the most units sold.
+4. `database_acceptance_verification.sql` — checks seed totals, required constraint and index names, foreign-key delete actions, removed columns, trigger presence, and selected data-integrity conditions.
 
-For a brief summary query:
+The two verification files are read-only. The acceptance script raises an exception when an assertion fails and otherwise emits a `PASS` notice and summary counts. It does not exercise deliberate constraint violations or measure trigger timestamp advancement.
 
-```sql
-SELECT COUNT(*) AS sales_count,
-       COALESCE(SUM(quantity), 0) AS units_sold,
-       COALESCE(SUM(quantity * unit_price), 0) AS revenue,
-       ROUND(AVG(quantity * unit_price), 2) AS average_sale_value
-FROM sales;
-```
+## Verification record
 
-## Documentation and implementation status
+The database was connected and queried successfully in VS Code against `campus_store_test` on PostgreSQL **18.6**. The sales query returned **200 rows**. The acceptance verification was reported as successful.
 
-- [`docs/04-database-schema.md`](docs/04-database-schema.md) — revised schema specification and SQL structure.
-- [`docs/schema-alignment-report.md`](docs/schema-alignment-report.md) — comparison with the earlier implementation, adopted changes, and outstanding design choices.
+Execution on PostgreSQL 15 is **not documented as completed**.
+
+## Scope
+
+The SQL files implement the schema, development seed data, and verification queries. They do not implement backend API endpoints, automatic stock deductions for future sales, or sale cancellation processing.
