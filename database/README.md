@@ -14,6 +14,7 @@ Campus-store-management-system/
 │   ├── seed.sql                             # Development categories, products, and sales
 │   ├── verify.sql                           # Read-only reporting and inspection queries
 │   └── database_acceptance_verification.sql # Read-only acceptance assertions
+├── compose.yaml                              # PostgreSQL 18 development setup
 ├── docs/                                    # Project documentation
 └── .gitignore
 ```
@@ -61,7 +62,7 @@ The schema does not include `products.is_active` or `sales.status`.
 
 The categories are Beverages, Campus Merchandise, Electronics, Personal Care, Snacks, and Stationery. Sample prices are illustrative; the SQL does not designate a currency.
 
-The seed runs in a transaction and refuses to insert sample data if any of the three tables already contains records. Before committing, it checks the record totals, units sold, remaining stock, and per-product inventory reconciliation. The SQL seed adjusts stock for its generated historical sales; it does not implement ongoing sale or cancellation processing.
+The seed asserts cash/card/mobile-money counts of 67/67/66 and total sample revenue of 12,549.50 (currency unspecified). The seed runs in a transaction and refuses to insert sample data if any of the three tables already contains records. Before committing, it checks the record totals, units sold, remaining stock, and per-product inventory reconciliation. The SQL seed adjusts stock for its generated historical sales; it does not implement ongoing sale or cancellation processing.
 
 ## SQL files and execution order
 
@@ -76,9 +77,29 @@ The two verification files are read-only. The acceptance script raises an except
 
 ## Verification record
 
-The database was connected and queried successfully in VS Code against `campus_store_test` on PostgreSQL **18.6**. The sales query returned **200 rows**. The acceptance verification was reported as successful.
+Previously, the database was queried in VS Code against `campus_store_test` on PostgreSQL **18.6**, with 200 sales rows reported. The current Docker acceptance test has **not yet been executed**; its results must be recorded before merging.
 
-Execution on PostgreSQL 15 is **not documented as completed**.
+## Docker Compose: clean development database
+
+From the **repository root**, with Docker Desktop/Engine and Compose installed:
+
+```bash
+docker compose up --build -d
+docker compose logs db
+docker compose exec db psql -U campus_store -d campus_store -f /docker-entrypoint-initdb.d/03-acceptance.sql
+```
+
+On first initialization, PostgreSQL runs `01-init.sql`, `02-seed.sql`, then `03-acceptance.sql` in file-name order. Look for `PASS:` in the database logs and confirm that the database container stays healthy. The acceptance SQL is read-only and ends in `ROLLBACK`; this does not undo the committed seed. `verify.sql` remains available for manual reporting. PostgreSQL 18 is selected to match the major version previously tested in VS Code, not to imply the Docker test has passed.
+
+**Destructive clean rebuild — only on a disposable development instance:**
+
+```bash
+docker compose down -v
+docker compose up --build -d
+docker compose logs db
+```
+
+`down -v` **deletes the Compose-managed database volume and all records in it**. Never run it against data that must be retained. Initialization scripts execute only when the PostgreSQL data volume is empty. The container uses host port `5433` (connect to `localhost:5433`, database/user `campus_store`). `POSTGRES_PASSWORD` defaults to a **development-only** placeholder; set a strong `POSTGRES_PASSWORD` in your environment for any shared deployment. Do not store real credentials in Git.
 
 ## Scope
 

@@ -1,5 +1,5 @@
 -- Campus Store Management System: acceptance verification
--- Run on a fresh PostgreSQL 15 database AFTER init.sql and seed.sql.
+-- Run after init.sql and seed.sql on PostgreSQL 18 (also executed by Docker on fresh volume).
 -- Read-only checks; raises an exception if an assertion fails.
 BEGIN;
 DO $$
@@ -12,6 +12,20 @@ BEGIN
      (SELECT SUM(quantity) FROM sales) <> 402 OR
      (SELECT SUM(stock_quantity) FROM products) <> 2043 THEN
     RAISE EXCEPTION 'Seed totals do not match expected 6/24/200/402/2043';
+  END IF;
+
+  IF COALESCE((SELECT SUM(quantity * unit_price) FROM sales), 0) <> 12549.50 OR
+     (SELECT COUNT(*) FROM sales WHERE payment_method='cash') <> 67 OR
+     (SELECT COUNT(*) FROM sales WHERE payment_method='card') <> 67 OR
+     (SELECT COUNT(*) FROM sales WHERE payment_method='mobile_money') <> 66 THEN
+    RAISE EXCEPTION 'Revenue or payment split does not match expected 12549.50 / 67 / 67 / 66';
+  END IF;
+
+  IF EXISTS (
+     SELECT 1 FROM categories c LEFT JOIN products p ON p.category_id=c.id
+     GROUP BY c.id HAVING COUNT(p.id) <> 4
+  ) THEN
+    RAISE EXCEPTION 'Each category must contain exactly four products';
   END IF;
 
   IF EXISTS (SELECT 1 FROM information_schema.columns
@@ -64,14 +78,18 @@ BEGIN
   IF EXISTS (SELECT 1 FROM products GROUP BY lower(name) HAVING COUNT(*) > 1) THEN
     RAISE EXCEPTION 'Case-insensitive duplicate product names';
   END IF;
-  RAISE NOTICE 'PASS: schema objects, RESTRICT FKs, removed columns, seed totals, and integrity';
+  RAISE NOTICE 'PASS: schema, category distribution, seed totals, revenue, payment split and integrity';
 END $$;
 SELECT current_setting('server_version') AS postgres_version,
        (SELECT COUNT(*) FROM categories) AS categories,
        (SELECT COUNT(*) FROM products) AS products,
        (SELECT COUNT(*) FROM sales) AS sales,
        (SELECT SUM(quantity) FROM sales) AS units_sold,
-       (SELECT SUM(stock_quantity) FROM products) AS stock_remaining;
+       (SELECT SUM(stock_quantity) FROM products) AS stock_remaining,
+       (SELECT SUM(quantity * unit_price) FROM sales) AS revenue,
+       (SELECT COUNT(*) FROM sales WHERE payment_method='cash') AS cash_count,
+       (SELECT COUNT(*) FROM sales WHERE payment_method='card') AS card_count,
+       (SELECT COUNT(*) FROM sales WHERE payment_method='mobile_money') AS mobile_money_count;
 ROLLBACK;
 -- This does not behavior-test unique violations, delete SQLSTATE 23001,
 -- or updated_at timestamp advancement; those require separate controlled tests.
