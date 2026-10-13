@@ -55,7 +55,33 @@ FROM (VALUES
     ('Stationery', 'Pencil Pack',             10.00, 100),
     ('Stationery', 'Highlighter',              9.00, 110)
 ) AS v(category_name, product_name, price, opening_stock)
-JOIN categories AS c ON c.name = v.category_name;
+JOIN categories AS c ON c.name = v.category_name
+ORDER BY array_position(ARRAY[
+    'Bottled Water 500ml',
+    'Cola 330ml',
+    'Fruit Juice 250ml',
+    'Iced Tea 500ml',
+    'Campus T-Shirt',
+    'Campus Hoodie',
+    'Campus Lanyard',
+    'Canvas Tote Bag',
+    'USB-C Charging Cable',
+    'USB Flash Drive 32GB',
+    'Wired Earphones',
+    'Phone Wall Charger',
+    'Hand Sanitizer 100ml',
+    'Pocket Tissue Pack',
+    'Soap Bar',
+    'Lip Balm',
+    'Plantain Chips',
+    'Biscuit Pack',
+    'Chocolate Bar',
+    'Granola Bar',
+    'A5 Ruled Notebook',
+    'Blue Ballpoint Pen',
+    'Pencil Pack',
+    'Highlighter'
+]::text[], v.product_name);
 
 CREATE TEMP TABLE seed_opening_stock ON COMMIT DROP AS
 SELECT id AS product_id, stock_quantity AS opening_stock
@@ -76,9 +102,9 @@ SELECT
     p.price AS unit_price,
     CURRENT_TIMESTAMP - ((201 - n.n) * INTERVAL '6 hours') AS sale_date,
     CASE (n.n % 3)
-        WHEN 0 THEN 'cash'
-        WHEN 1 THEN 'card'
-        ELSE 'mobile_money'
+        WHEN 0 THEN 'mobile_money'
+        WHEN 1 THEN 'cash'
+        ELSE 'card'
     END AS payment_method
 FROM sample_numbers AS n
 JOIN numbered_products AS p
@@ -114,6 +140,17 @@ BEGIN
         RAISE EXCEPTION 'Unexpected sales quantity or stock total; rolling back.';
     END IF;
 
+    -- Fixed payment-method split and deterministic example revenue.
+    IF (SELECT COUNT(*) FROM sales WHERE payment_method = 'cash') <> 67
+       OR (SELECT COUNT(*) FROM sales WHERE payment_method = 'card') <> 67
+       OR (SELECT COUNT(*) FROM sales WHERE payment_method = 'mobile_money') <> 66 THEN
+        RAISE EXCEPTION 'Unexpected payment split; rolling back.';
+    END IF;
+
+    IF (SELECT COALESCE(SUM(quantity * unit_price), 0) FROM sales) <> 12549.50 THEN
+        RAISE EXCEPTION 'Unexpected seed revenue; rolling back.';
+    END IF;
+
     IF EXISTS (
         SELECT 1
         FROM products AS p
@@ -131,7 +168,7 @@ $$;
 
 COMMIT;
 
--- Expected: 6 categories, 24 products, 200 sales, 402 units sold, 2,043 left.
+-- Expected: 6 categories, 24 products, 200 sales, 402 units sold, 2,043 left; revenue 12,549.50.
 SELECT
     (SELECT COUNT(*) FROM categories) AS category_count,
     (SELECT COUNT(*) FROM products) AS product_count,
