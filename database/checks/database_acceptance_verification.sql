@@ -1,5 +1,5 @@
 -- Campus Store Management System: acceptance verification
--- Run after init.sql and seed.sql on PostgreSQL 18 (also executed by Docker on fresh volume).
+-- Run after init.sql and seed.sql on PostgreSQL 15+ (run manually after Docker has seeded a fresh volume).
 -- Read-only checks; raises an exception if an assertion fails.
 BEGIN;
 DO $$

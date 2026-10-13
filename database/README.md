@@ -8,16 +8,19 @@ The `database/` directory contains the PostgreSQL schema, development sample dat
 
 ```text
 Campus-store-management-system/
+├── README.md                         # Project-level README (retained)
+├── docker-compose.yml                # Existing Docker configuration on main
 ├── database/
-│   ├── README.md                            # Database implementation documentation
-│   ├── init.sql                             # Schema, constraints, indexes, and trigger
-│   ├── seed.sql                             # Development categories, products, and sales
-│   ├── verify.sql                           # Read-only reporting and inspection queries
-│   └── database_acceptance_verification.sql # Read-only acceptance assertions
-├── compose.yaml                              # PostgreSQL 18 development setup
-├── docs/                                    # Project documentation
-└── .gitignore
+│   ├── README.md                     # Database-specific documentation
+│   ├── init.sql                      # Executed automatically on a new PostgreSQL volume
+│   ├── seed.sql                      # Executed automatically after init.sql
+│   └── checks/
+│       ├── verify.sql               # Manual read-only reporting
+│       └── database_acceptance_verification.sql # Manual acceptance assertions
+└── docs/                              # Project documentation
 ```
+
+The existing `docker-compose.yml` on `main` mounts `./database` into `/docker-entrypoint-initdb.d`. Only top-level `init.sql` and `seed.sql` should execute during automatic initialization. Keep both verification scripts in `database/checks/` and invoke them manually after database initialization; do not move them back to the top level.
 
 ## Implemented schema
 
@@ -75,40 +78,34 @@ The values are sample alert thresholds, not real replenishment policy.
 
 ## SQL files and execution order
 
-On a new, empty database, execute:
+For a fresh, disposable development database:
 
-1. `init.sql` — creates the three tables, constraints, indexes, and product timestamp trigger.
-2. `seed.sql` — populates the sample data and reconciles inventory.
-3. `verify.sql` — returns dataset totals, selected column metadata, low-stock products, and the five products with the most units sold.
-4. `database_acceptance_verification.sql` — checks seed totals, required constraint and index names, foreign-key delete actions, removed columns, trigger presence, and selected data-integrity conditions.
+1. `database/init.sql` — automatically creates tables, constraints, indexes, and trigger.
+2. `database/seed.sql` — automatically seeds development data, asserting revenue, payment allocation, inventory reconciliation, and a low-stock example.
+3. `database/checks/verify.sql` — run manually after initialization for inspection and reporting.
+4. `database/checks/database_acceptance_verification.sql` — run manually after initialization to assert schema and data requirements.
 
-The two verification files are read-only. The acceptance script raises an exception when an assertion fails and otherwise emits a `PASS` notice and summary counts. It does not exercise deliberate constraint violations or measure trigger timestamp advancement.
+The verification scripts are read-only and intentionally live in a subdirectory so the PostgreSQL entrypoint does not run them before the schema exists. The acceptance script uses a transaction ending in `ROLLBACK`; it does not erase committed seed data.
 
 ## Verification record
 
-Previously, the database was queried in VS Code against `campus_store_test` on PostgreSQL **18.6**, with 200 sales rows reported. The current Docker acceptance test has **not yet been executed**; its results must be recorded before merging.
+The SQL was previously checked through VS Code on PostgreSQL 18.6. The repository's existing Docker configuration on `main` uses **PostgreSQL 15 Alpine**. A successful Docker test with PostgreSQL 15 has **not yet been evidenced** and is required before merge.
 
-## Docker Compose: clean development database
+## Docker compatibility and handoff
 
-From the **repository root**, with Docker Desktop/Engine and Compose installed:
+Use the `docker-compose.yml` already tracked on `main`; do not introduce a separate `compose.yaml` from the database branch. According to the PR review, its development connection uses database user `store_admin`, host port `5432`, and image `postgres:15-alpine`. Confirm the database name, service name, credentials, and volume names directly from the actual Compose file before running commands.
 
-```bash
-docker compose up --build -d
-docker compose logs db
-docker compose exec db psql -U campus_store -d campus_store -f /docker-entrypoint-initdb.d/03-acceptance.sql
-```
-
-On first initialization, PostgreSQL runs `01-init.sql`, `02-seed.sql`, then `03-acceptance.sql` in file-name order. Look for `PASS:` in the database logs and confirm that the database container stays healthy. The acceptance SQL is read-only and ends in `ROLLBACK`; this does not undo the committed seed. `verify.sql` remains available for manual reporting. PostgreSQL 18 is selected to match the major version previously tested in VS Code, not to imply the Docker test has passed.
-
-**Destructive clean rebuild — only on a disposable development instance:**
+Nana Yaw owns the Docker/AWS implementation and fresh-build test. Coordinate a disposable test environment with him; `docker compose down -v` **permanently removes Compose-managed volumes**. After the clean build, run the acceptance SQL manually against the seeded database, for example by piping the local file to `psql` inside the running database container (replace `<db-service>` and `<db-name>` with values from the actual Compose file):
 
 ```bash
-docker compose down -v
-docker compose up --build -d
-docker compose logs db
+# Caution: run only after confirming that the Compose volume holds no data to preserve.
+docker compose -f docker-compose.yml down -v
+docker compose -f docker-compose.yml up --build -d
+docker compose -f docker-compose.yml logs <db-service>
+docker compose -f docker-compose.yml exec -T <db-service> psql -v ON_ERROR_STOP=1 -U store_admin -d <db-name> < database/checks/database_acceptance_verification.sql
 ```
 
-`down -v` **deletes the Compose-managed database volume and all records in it**. Never run it against data that must be retained. Initialization scripts execute only when the PostgreSQL data volume is empty. The container uses host port `5433` (connect to `localhost:5433`, database/user `campus_store`). `POSTGRES_PASSWORD` defaults to a **development-only** placeholder; set a strong `POSTGRES_PASSWORD` in your environment for any shared deployment. Do not store real credentials in Git.
+Do not copy these placeholder commands verbatim. For PostgreSQL errors, check container logs and share the acceptance script's `PASS` notice and totals as PR evidence. The PostgreSQL entrypoint performs first-time initialization only when its data directory is empty.
 
 ## Scope
 
