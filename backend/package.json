@@ -1,0 +1,11 @@
+{
+  "name": "campus-store-backend",
+  "version": "1.0.0",
+  "description": "Express backend for campus store",
+  "scripts": {
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.0"
+  }
+}
