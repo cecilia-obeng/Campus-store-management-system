@@ -1,25 +1,24 @@
--- CAMPUS STORE SALES TRACKER | STEP 2
--- Sample dataset for the Step 1 tables: categories, products, sales.
--- Run once against campus_store_db in pgAdmin Query Tool.
--- Currency: illustrative project currency units; confirm the reporting currency with the team.
--- Assumes the three tables exist and contain no records.
+-- Campus Store Management System | Sample development data (v1)
+-- Run AFTER database/init.sql on a NEW database with empty tables.
+-- 6 categories, 24 products, exactly 200 example sales.
+-- Illustrative prices; reporting currency has not been agreed.
+-- The seed deducts historical sample sales from opening inventory once.
 
 BEGIN;
 
--- Fail safely rather than silently duplicating data on a second run.
+-- Fail safely on repeat runs, avoiding duplicate sample records.
 LOCK TABLE categories, products, sales IN SHARE ROW EXCLUSIVE MODE;
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM categories)
        OR EXISTS (SELECT 1 FROM products)
        OR EXISTS (SELECT 1 FROM sales) THEN
-        RAISE EXCEPTION 'Step 2 seed requires empty categories, products, and sales tables. No data has been changed.';
+        RAISE EXCEPTION 'Seed requires empty categories, products and sales tables; no data has been changed.';
     END IF;
 END;
 $$;
 
--- 1. Product categories
-INSERT INTO categories (category_name) VALUES
+INSERT INTO categories (name) VALUES
     ('Beverages'),
     ('Campus Merchandise'),
     ('Electronics'),
@@ -27,9 +26,9 @@ INSERT INTO categories (category_name) VALUES
     ('Snacks'),
     ('Stationery');
 
--- 2. Product catalogue, selling prices, and opening stock
-INSERT INTO products (category_id, product_name, unit_price, stock_quantity)
-SELECT c.category_id, v.product_name, v.unit_price, v.opening_stock
+-- Opening stock is captured before simulated sales are applied.
+INSERT INTO products (category_id, name, price, stock_quantity)
+SELECT c.id, v.product_name, v.price, v.opening_stock
 FROM (VALUES
     ('Beverages', 'Bottled Water 500ml',        5.00, 180),
     ('Beverages', 'Cola 330ml',                10.00, 130),
@@ -55,101 +54,98 @@ FROM (VALUES
     ('Stationery', 'Blue Ballpoint Pen',       4.50, 200),
     ('Stationery', 'Pencil Pack',             10.00, 100),
     ('Stationery', 'Highlighter',              9.00, 110)
-) AS v(category_name, product_name, unit_price, opening_stock)
-JOIN categories AS c ON c.category_name = v.category_name;
+) AS v(category_name, product_name, price, opening_stock)
+JOIN categories AS c ON c.name = v.category_name;
 
--- Opening inventory snapshot used to confirm stock reconciliation.
 CREATE TEMP TABLE seed_opening_stock ON COMMIT DROP AS
-SELECT product_id, stock_quantity AS opening_stock
+SELECT id AS product_id, stock_quantity AS opening_stock
 FROM products;
 
--- 3. Stage exactly 200 sales spread across the previous 50 days.
--- Sales quantities range 1-3; product prices are preserved at sale time.
+-- Generate sales over approximately 50 days, with 1-3 units per sale.
 CREATE TEMP TABLE seed_sales ON COMMIT DROP AS
 WITH numbered_products AS (
-    SELECT product_id, unit_price,
-           ROW_NUMBER() OVER (ORDER BY product_id) AS product_number
+    SELECT id AS product_id, price,
+           ROW_NUMBER() OVER (ORDER BY id) AS product_number
     FROM products
 ), sample_numbers AS (
-    SELECT generate_series(1, 200) AS n
+    SELECT GENERATE_SERIES(1, 200) AS n
 )
 SELECT
     p.product_id,
     1 + ((n.n * 11 + (n.n / 5)) % 3) AS quantity,
-    p.unit_price AS unit_price_at_sale,
+    p.price AS unit_price,
     CURRENT_TIMESTAMP - ((201 - n.n) * INTERVAL '6 hours') AS sale_date,
     CASE (n.n % 3)
         WHEN 0 THEN 'cash'
         WHEN 1 THEN 'card'
         ELSE 'mobile_money'
-    END AS payment_method,
-    'completed'::VARCHAR(20) AS status
+    END AS payment_method
 FROM sample_numbers AS n
 JOIN numbered_products AS p
   ON p.product_number = 1 + (((n.n - 1) * 7 + ((n.n - 1) / 24)) % 24);
 
--- 4. Apply matching deductions for all 200 sales.
--- A PostgreSQL check constraint will reject any stock balance below zero.
+-- Deduct the quantities recorded in the staged sales from opening stock.
+-- The products UPDATE also fires trg_products_updated_at.
 UPDATE products AS p
-SET stock_quantity = p.stock_quantity - d.units_sold,
-    updated_at = CURRENT_TIMESTAMP
+SET stock_quantity = p.stock_quantity - d.units_sold
 FROM (
     SELECT product_id, SUM(quantity)::INTEGER AS units_sold
     FROM seed_sales
     GROUP BY product_id
 ) AS d
-WHERE p.product_id = d.product_id;
+WHERE p.id = d.product_id;
 
--- 5. Insert the exact same staged sales into the permanent sales table.
-INSERT INTO sales
-    (product_id, quantity, unit_price_at_sale, sale_date, payment_method, status)
-SELECT product_id, quantity, unit_price_at_sale,
-       sale_date, payment_method, status
+INSERT INTO sales (product_id, quantity, unit_price, sale_date, payment_method)
+SELECT product_id, quantity, unit_price, sale_date, payment_method
 FROM seed_sales
 ORDER BY sale_date;
 
--- 6. Validate counts, totals, and opening-stock reconciliation before commit.
+-- Verify sample dataset and reconcile inventory before committing anything.
 DO $$
 BEGIN
     IF (SELECT COUNT(*) FROM categories) <> 6
        OR (SELECT COUNT(*) FROM products) <> 24
        OR (SELECT COUNT(*) FROM sales) <> 200 THEN
-        RAISE EXCEPTION 'Seed verification failed: expected 6 categories, 24 products and 200 sales.';
+        RAISE EXCEPTION 'Unexpected sample counts; rolling back.';
+    END IF;
+
+    IF (SELECT SUM(quantity) FROM sales) <> 402
+       OR (SELECT SUM(stock_quantity) FROM products) <> 2043 THEN
+        RAISE EXCEPTION 'Unexpected sales quantity or stock total; rolling back.';
     END IF;
 
     IF EXISTS (
         SELECT 1
         FROM products AS p
-        JOIN seed_opening_stock AS o USING (product_id)
+        JOIN seed_opening_stock AS o ON o.product_id = p.id
         LEFT JOIN (
             SELECT product_id, SUM(quantity)::INTEGER AS units_sold
-            FROM sales
-            WHERE status = 'completed'
-            GROUP BY product_id
-        ) AS s USING (product_id)
-        WHERE p.stock_quantity <> (o.opening_stock - COALESCE(s.units_sold, 0))
+            FROM sales GROUP BY product_id
+        ) AS s ON s.product_id = p.id
+        WHERE p.stock_quantity <> o.opening_stock - COALESCE(s.units_sold, 0)
     ) THEN
-        RAISE EXCEPTION 'Stock reconciliation failed; rolling back the seed.';
+        RAISE EXCEPTION 'Product stock reconciliation failed; rolling back.';
     END IF;
 END;
 $$;
 
 COMMIT;
 
--- 7. Verification results (run automatically at the end).
+-- Expected: 6 categories, 24 products, 200 sales, 402 units sold, 2,043 left.
 SELECT
     (SELECT COUNT(*) FROM categories) AS category_count,
     (SELECT COUNT(*) FROM products) AS product_count,
     (SELECT COUNT(*) FROM sales) AS sales_count,
-    (SELECT COALESCE(SUM(quantity),0) FROM sales WHERE status = 'completed') AS units_sold,
-    (SELECT COALESCE(SUM(stock_quantity),0) FROM products) AS remaining_units,
-    (SELECT COALESCE(SUM(quantity * unit_price_at_sale),0) FROM sales WHERE status = 'completed') AS revenue;
+    (SELECT COALESCE(SUM(quantity), 0) FROM sales) AS units_sold,
+    (SELECT COALESCE(SUM(stock_quantity), 0) FROM products) AS remaining_units,
+    (SELECT COALESCE(SUM(quantity * unit_price), 0) FROM sales) AS revenue;
 
--- Breakdown by product for inspection.
-SELECT p.product_name, p.stock_quantity AS stock_remaining,
-       COALESCE(SUM(s.quantity) FILTER (WHERE s.status = 'completed'),0) AS units_sold,
-       COALESCE(SUM(s.quantity * s.unit_price_at_sale) FILTER (WHERE s.status = 'completed'),0) AS revenue
+-- Revenue breakdown, including products with zero sales.
+SELECT p.name AS product_name,
+       p.stock_quantity AS stock_remaining,
+       COALESCE(SUM(s.quantity), 0) AS units_sold,
+       COALESCE(SUM(s.quantity * s.unit_price), 0) AS revenue
 FROM products AS p
-LEFT JOIN sales AS s ON s.product_id = p.product_id
-GROUP BY p.product_id, p.product_name, p.stock_quantity
-ORDER BY units_sold DESC, p.product_name;
+LEFT JOIN sales AS s ON s.product_id = p.id
+GROUP BY p.id, p.name, p.stock_quantity
+ORDER BY units_sold DESC, p.name;
