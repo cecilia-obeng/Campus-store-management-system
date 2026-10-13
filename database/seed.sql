@@ -27,8 +27,16 @@ INSERT INTO categories (name) VALUES
     ('Stationery');
 
 -- Opening stock is captured before simulated sales are applied.
-INSERT INTO products (category_id, name, price, stock_quantity)
-SELECT c.id, v.product_name, v.price, v.opening_stock
+-- Demo thresholds: ensure low-stock alerts appear on a freshly seeded database.
+-- Campus Hoodie ends at 25 units (threshold 30), and Phone Wall Charger
+-- ends at 30 units (threshold 35). All other products retain default 10.
+INSERT INTO products (category_id, name, price, stock_quantity, reorder_level)
+SELECT c.id, v.product_name, v.price, v.opening_stock,
+       CASE v.product_name
+           WHEN 'Campus Hoodie' THEN 30
+           WHEN 'Phone Wall Charger' THEN 35
+           ELSE 10
+       END
 FROM (VALUES
     ('Beverages', 'Bottled Water 500ml',        5.00, 180),
     ('Beverages', 'Cola 330ml',                10.00, 130),
@@ -149,6 +157,13 @@ BEGIN
 
     IF (SELECT COALESCE(SUM(quantity * unit_price), 0) FROM sales) <> 12549.50 THEN
         RAISE EXCEPTION 'Unexpected seed revenue; rolling back.';
+    END IF;
+
+    -- Issue #56: fresh-seed low-stock demonstration must be possible.
+    IF NOT EXISTS (
+        SELECT 1 FROM products WHERE stock_quantity <= reorder_level
+    ) THEN
+        RAISE EXCEPTION 'Expected at least one low-stock product; rolling back.';
     END IF;
 
     IF EXISTS (

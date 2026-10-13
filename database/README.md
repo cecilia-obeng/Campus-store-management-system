@@ -64,6 +64,15 @@ The categories are Beverages, Campus Merchandise, Electronics, Personal Care, Sn
 
 The seed asserts cash/card/mobile-money counts of 67/67/66 and total sample revenue of 12,549.50 (currency unspecified). The seed runs in a transaction and refuses to insert sample data if any of the three tables already contains records. Before committing, it checks the record totals, units sold, remaining stock, and per-product inventory reconciliation. The SQL seed adjusts stock for its generated historical sales; it does not implement ongoing sale or cancellation processing.
 
+## Low-stock demonstration (Issue #56)
+
+A fresh seed intentionally creates two low-stock examples without changing the sales,
+revenue, or remaining-stock totals: **Campus Hoodie** (25 remaining, reorder level 30)
+and **Phone Wall Charger** (30 remaining, reorder level 35). All other products use
+reorder level 10. The `verify.sql` low-stock query shows these examples immediately;
+`database_acceptance_verification.sql` asserts at least one low-stock product exists.
+The values are sample alert thresholds, not real replenishment policy.
+
 ## SQL files and execution order
 
 On a new, empty database, execute:

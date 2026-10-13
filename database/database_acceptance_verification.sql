@@ -28,6 +28,11 @@ BEGIN
     RAISE EXCEPTION 'Each category must contain exactly four products';
   END IF;
 
+  -- Issue #56: at least one low-stock item must exist on a fresh seed.
+  IF NOT EXISTS (SELECT 1 FROM products WHERE stock_quantity <= reorder_level) THEN
+    RAISE EXCEPTION 'Issue #56: no low-stock products in fresh seed';
+  END IF;
+
   IF EXISTS (SELECT 1 FROM information_schema.columns
              WHERE table_schema='public' AND
               ((table_name IN ('categories','products') AND column_name='is_active') OR
@@ -78,7 +83,7 @@ BEGIN
   IF EXISTS (SELECT 1 FROM products GROUP BY lower(name) HAVING COUNT(*) > 1) THEN
     RAISE EXCEPTION 'Case-insensitive duplicate product names';
   END IF;
-  RAISE NOTICE 'PASS: schema, category distribution, seed totals, revenue, payment split and integrity';
+  RAISE NOTICE 'PASS: schema, seed totals, revenue, payments, low-stock demo and integrity';
 END $$;
 SELECT current_setting('server_version') AS postgres_version,
        (SELECT COUNT(*) FROM categories) AS categories,
