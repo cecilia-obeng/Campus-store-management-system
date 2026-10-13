@@ -19,7 +19,7 @@ Product management
 - List and search products by name; filter by category.
 - Add, view, edit, and delete products.
 - Display each product’s name, category, price, stock quantity, and active status.
-- Mark a product as low stock when stock_quantity < reorder_level.
+- Display the API-provided `is_low_stock` boolean for low-stock alerts and product status. The API defines low stock as `stock_quantity <= reorder_level`; the frontend does not recalculate it.
 Sales management
 - Record a sale with one product, quantity, sale date, and payment method.
 - View sales history and sale details.
@@ -60,9 +60,9 @@ For API requests, the UI displays:
 - An empty state when a list or dashboard has no data.
 Sale submission should prevent repeated clicks while the request is in progress. The frontend should show the backend’s insufficient-stock error clearly and refresh affected product and dashboard data after a successful sale or cancellation.
 7. Development and configuration
-The frontend calls the API through a configurable base URL so it can work in local development and in Docker. In the deployed setup, requests use the same-origin /api path through the frontend proxy.
+The frontend loads products from `GET /api/products?limit=100` and uses each response’s `is_low_stock` value. API requests use the same-origin `/api` path through the Vite development proxy. `VITE_API_URL` selects the API path (default `/api`), and `API_PROXY_TARGET` selects the backend host (Docker Compose uses `http://backend:8000`; local development defaults to `http://localhost:8000`).
 8. Current status and next steps
-The repository, collaborators, and frontend development branch are in place. Next, confirm API request/response formats with the backend owner, then build the product list and forms, sales flow, and dashboard.
+The product list requests `GET /api/products?limit=100` and renders the API-provided low-stock flag. If the API is unavailable, the UI shows clearly labelled sample products. Sales history and recording, product create/edit/delete, and live dashboard KPIs remain to be connected.
 9. Expected outcome
 A usable interface that lets campus store staff manage products, record and review sales, identify low-stock products, and understand key sales metrics.
 
