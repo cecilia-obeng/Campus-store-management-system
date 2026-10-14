@@ -7,7 +7,7 @@ const seed=[
 {id:4,name:'Campus Notebook',category_name:'Stationery',price:4.25,stock_quantity:10,reorder_level:10,is_low_stock:true},
 {id:5,name:'Trail Mix Pack',category_name:'Snacks',price:3.75,stock_quantity:9,reorder_level:10,is_low_stock:true},
 {id:6,name:'USB-C Cable',category_name:'Electronics',price:8.99,stock_quantity:3,reorder_level:5,is_low_stock:true}]
-const money=n=>'$'+Number(n).toFixed(2)
+const money=n=>'GHS '+new Intl.NumberFormat('en-GH',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(n))
 export default function App(){
 const [page,setPage]=useState('Overview'),[products,setProducts]=useState(seed),[apiMode,setApiMode]=useState('connecting'),[sales,setSales]=useState([
 {id:'SL-2048',name:'Campus Hoodie',quantity:1,total:38,date:'Today, 11:42 AM'},
