@@ -10,11 +10,13 @@ const errorHandler = require('./middleware/errorHandler');
 // so tests can import the app without opening one.
 const app = express();
 
-app.use(express.json({ limit: '100kb' }));
-app.use(cors({ origin: config.corsOrigins }));
+// Logger goes first so requests that fail later (bad JSON, too large) are still logged.
 if (config.requestLogging) {
   app.use(requestLogger);
 }
+app.use(express.json({ limit: '100kb' }));
+app.use(cors({ origin: config.corsOrigins }));
+
 
 app.use('/api', routes);
 
