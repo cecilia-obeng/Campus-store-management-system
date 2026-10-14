@@ -16,8 +16,6 @@ if (config.requestLogging) {
 }
 app.use(express.json({ limit: '100kb' }));
 app.use(cors({ origin: config.corsOrigins }));
-
-
 app.use('/api', routes);
 
 // Must come after every route, and errorHandler must be last.

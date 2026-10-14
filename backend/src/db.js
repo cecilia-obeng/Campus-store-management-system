@@ -21,7 +21,6 @@ async function ping() {
   await pool.query({ text: 'SELECT 1', query_timeout: 2000 });
 }
 
-
 // withTransaction: added in L04
 
 module.exports = {
