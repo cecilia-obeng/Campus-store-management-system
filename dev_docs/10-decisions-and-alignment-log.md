@@ -12,7 +12,7 @@
 
 | ID | Decision | Rationale | Agreed by | Status |
 |----|----------|-----------|-----------|--------|
-| D-01 | **Low stock = `stock_quantity <= reorder_level`** ("at or below") | Already implemented in Samuel's `verify.sql` and database README; it is the standard reorder-point meaning. The API calculates `is_low_stock`, so the frontend only displays it. **Supersedes** the `<` in the frontend design and the earlier API draft. | Joseph, Samuel; Cecilia to confirm | Accepted (pending Cecilia's ack) |
+| D-01 | **Low stock = `stock_quantity <= reorder_level`** ("at or below") | Already implemented in Samuel's `verify.sql` and database README; it is the standard reorder-point meaning. The API calculates `is_low_stock`, so the frontend only displays it. **Supersedes** the `<` in the frontend design and the earlier API draft. | Joseph, Samuel, Cecilia (acknowledged 13 Oct 2026) | Accepted |
 | D-02 | One sale = one product line; order = one `sales` row | Brief; keeps the KPIs simple | All | Accepted |
 | D-03 | `sales.unit_price` snapshots the product price; the client can't send a price | Past revenue stays stable; prevents tampering | All | Accepted |
 | D-04 | Cancelling a sale **deletes** it and restores stock (no `status`) | Avoids a `status` filter in every KPI query (the app and Power BI could disagree). Trade-off: no cancellation history. | Joseph, Samuel | Accepted (v1) |
@@ -46,7 +46,7 @@ The sources compared were the mentor brief; `main` (DevOps PR #1); the `database
 
 | # | Topic | Source A | Source B | Resolution | Owner of follow-up | Status |
 |---|-------|----------|----------|------------|--------------------|--------|
-| A-01 | Low-stock comparison | Frontend design / API draft: `<` | DB `verify.sql` + README: `<=` | `<=` (D-01) | Cecilia ack | ⏳ |
+| A-01 | Low-stock comparison | Frontend design / API draft: `<` | DB `verify.sql` + README: `<=` | `<=` (D-01) | Cecilia | ✅ |
 | A-02 | Product "active status" | Frontend design shows it | Schema removed `is_active` | Removed from the UI | Cecilia | ⏳ |
 | A-03 | API port | Backend draft: 4000 | Compose/Dockerfile: 8000 | **8000** | n/a | ✅ |
 | A-04 | DB config | Backend draft: `DB_HOST`… | Compose: `DATABASE_URL` | **`DATABASE_URL`** | n/a | ✅ |

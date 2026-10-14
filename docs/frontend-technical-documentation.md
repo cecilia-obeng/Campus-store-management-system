@@ -1,68 +1,88 @@
-Campus Store Sales Tracker
-Frontend Technical Design
-Owner: Cecilia
-Status: Proposed
-Last updated: 12 October 2026
-1. Purpose
-The frontend is a responsive web app for campus store staff to manage products, record sales, monitor stock, and review sales performance. It communicates with the backend REST API; the API is responsible for saving data and enforcing business rules such as stock deductions.
-2. Technology
-- React with Vite
-- JavaScript
-- CSS
-- Fetch API for backend requests
-- Git and GitHub for version control and collaboration
-3. Scope and features
-Dashboard
-- Show total revenue, total orders, average order value, and the top five products using GET /api/summary.
-- Show loading, empty, and error states.
-Product management
-- List and search products by name; filter by category.
-- Add, view, edit, and delete products.
-- Display each product’s name, category, price, stock quantity, and active status.
-- Mark a product as low stock when stock_quantity < reorder_level.
-Sales management
-- Record a sale with one product, quantity, sale date, and payment method.
-- View sales history and sale details.
-- Allow an authorized staff member to correct or cancel a sale using the API.
-- Explain the effect of cancellation: the backend restores the sold quantity to stock.
-Categories
-- Load categories for product filters and forms.
-4. Data assumptions
-The current proposed database model has categories, products, and sales tables. Each sale record contains one product and its quantity; there is no separate sales_items table.
-The frontend uses these agreed field names:
-- Product low-stock threshold: reorder_level, maintained per product.
-- Sale timestamp: sale_date.
-The frontend displays the threshold returned by the API and does not assume it is always 10.
-5. API integration
-The frontend uses the following routes. Request and response details, including pagination and error response shapes, should follow the API contract agreed with the backend owner.
-Method	Endpoint	Frontend use
-GET	/api/health	Check whether the API is available
-GET	/api/categories	Load categories for filters and forms
-GET	/api/products	List, search, and filter products
-GET	/api/products/:id	Load a product for viewing or editing
-POST	/api/products	Create a product
-PUT	/api/products/:id	Update a product
-DELETE	/api/products/:id	Delete a product
-GET	/api/sales	Show sales history
-GET	/api/sales/:id	Show sale details
-POST	/api/sales	Record a sale
-PUT	/api/sales/:id	Correct a sale, according to backend rules
-DELETE	/api/sales/:id	Cancel a sale and restore stock
-GET	/api/summary	Load dashboard metrics
+# Campus Store Sales Tracker
+## Frontend Technical Design
 
+| | |
+|---|---|
+| Owner | Cecilia |
+| Status | Frontend implementation in progress |
+| Updated | 14 October 2026 |
 
-6. Forms and error handling
-The frontend provides clear labels, required-field indicators, and basic input checks before submitting forms. The backend remains the source of truth for validation.
-For API requests, the UI displays:
-- A loading state while data is being fetched or saved.
-- A success message after a successful create, update, or cancellation.
-- A readable error message when validation fails or the API is unavailable.
-- An empty state when a list or dashboard has no data.
-Sale submission should prevent repeated clicks while the request is in progress. The frontend should show the backend’s insufficient-stock error clearly and refresh affected product and dashboard data after a successful sale or cancellation.
-7. Development and configuration
-The frontend calls the API through a configurable base URL so it can work in local development and in Docker. In the deployed setup, requests use the same-origin /api path through the frontend proxy.
-8. Current status and next steps
-The repository, collaborators, and frontend development branch are in place. Next, confirm API request/response formats with the backend owner, then build the product list and forms, sales flow, and dashboard.
-9. Expected outcome
-A usable interface that lets campus store staff manage products, record and review sales, identify low-stock products, and understand key sales metrics.
+## 1. Purpose
 
+The React frontend lets campus store staff review sales, manage products, record sales, and monitor stock. The REST API is the source of truth for saved data and business rules.
+
+## 2. Technology and navigation
+
+- React, Vite, JavaScript, and CSS.
+- Fetch API for same-origin requests under /api.
+- Hash routes: #/overview, #/products, and #/sales; browser back and forward navigation are supported.
+- Vite serves the frontend on port 3000. Its development proxy sends /api requests to API_PROXY_TARGET.
+
+## 3. Frontend behavior
+
+### Overview
+
+- Requests GET /api/summary, with optional from and to dates, for revenue, order count, average order value, low-stock count, and top products.
+- Requests GET /api/summary/daily?days=7 for the seven-day revenue chart.
+- Displays sample figures only when the API is unavailable; sample data is labelled as demo data.
+
+### Products
+
+- Loads GET /api/products?limit=100.
+- Shows product cards with name, category, GHS price, stock, and the API-provided is_low_stock flag.
+- Supports debounced name search, category filtering, and a low-stock-only filter.
+- Add, edit, and delete forms call the corresponding product endpoints when connected.
+- is_low_stock is never recalculated in the frontend. The API defines it as stock_quantity <= reorder_level.
+
+### Sales
+
+- Loads GET /api/sales with date, product, and payment-method filters.
+- Records sales with product, quantity, date, and payment method. The request does not set the sale price; the API copies the current product price and deducts stock transactionally.
+- Supports correcting and cancelling sales through the API. Cancellation asks for confirmation.
+- In demo mode, changes are held in React state for the current browser session only; the demo does not change inventory.
+
+### Loading and errors
+
+- Product, sales, and summary requests show loading, error, retry, and empty states.
+- Form errors display the API's human-readable error message.
+- Save buttons are disabled while a request is in progress.
+
+## 4. API requests used
+
+| Method | Endpoint | Frontend use |
+|---|---|---|
+| GET | /api/products?limit=100 | Initial product list |
+| POST | /api/products | Create product |
+| PUT | /api/products/:id | Replace product fields |
+| DELETE | /api/products/:id | Delete product |
+| GET | /api/sales | Sales history with supported filters |
+| POST | /api/sales | Record sale |
+| PUT | /api/sales/:id | Correct sale |
+| DELETE | /api/sales/:id | Cancel sale |
+| GET | /api/summary | Dashboard KPIs and top products |
+| GET | /api/summary/daily?days=7 | Revenue chart |
+
+Category choices are derived from product data, with the agreed sample categories available in demo mode. The frontend does not currently call /api/categories, /api/health, /api/products/:id, or /api/sales/:id.
+
+## 5. Data contract
+
+Product samples match the API product object: id, name, category_id, category_name, price, stock_quantity, reorder_level, is_low_stock, created_at, and updated_at.
+
+Sale samples match the API sale object: id, product_id, product_name, category_id, category_name, quantity, unit_price, total, payment_method, sale_date, and created_at.
+
+Prices display in Ghana cedis, for example GHS 1,234.50. Accepted payment values are cash, mobile_money, and card.
+
+## 6. Configuration and runtime
+
+- Browser API path: VITE_API_URL, default /api.
+- Vite proxy target: API_PROXY_TARGET, default http://localhost:8000; Compose supplies http://backend:8000.
+- The browser uses the same-origin /api path, avoiding a browser CORS dependency in the Vite proxy setup.
+- npm start serves Vite on port 3000.
+
+## 7. Current status and dependencies
+
+The frontend routes, product cards and forms, sales forms/history, local search and filters, API request handlers, dashboard summary UI, and daily chart UI are implemented. The frontend can run in demo mode while the API is unavailable.
+
+Live API behavior is not yet confirmed: the available backend branch currently contains only a placeholder server. The summary and daily chart depend on Joseph's corresponding endpoints. Running the full app with Docker Compose and confirming the frontend proxy depends on Nana Yaw's DevOps setup.
+
+The production build and frontend lint have passed locally. A live API run and Docker Compose demonstration remain outstanding.
