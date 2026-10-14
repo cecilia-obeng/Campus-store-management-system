@@ -89,7 +89,23 @@ The verification scripts are read-only and intentionally live in a subdirectory 
 
 ## Verification record
 
-The SQL was previously checked through VS Code on PostgreSQL 18.6. The repository's existing Docker configuration on `main` uses **PostgreSQL 15 Alpine**. A successful Docker test with PostgreSQL 15 has **not yet been evidenced** and is required before merge.
+### PostgreSQL 15 Docker Acceptance Test
+
+The database integration was successfully verified using a fresh PostgreSQL 15.19 Alpine Docker container.
+
+The initialization process executed `init.sql` followed by `seed.sql` without errors. Both `verify.sql` and `database_acceptance_verification.sql` completed successfully.
+
+**Verified results:**
+- 6 categories and 24 products.
+- 200 sales involving 402 units.
+- 2,043 units of remaining inventory.
+- Total revenue of 12,549.50.
+- Payment distribution of 67 cash, 67 card, and 66 mobile-money sales.
+- Two low-stock products: Campus Hoodie (25 remaining, reorder level 30) and Phone Wall Charger (30 remaining, reorder level 35).
+
+Database constraint testing also confirmed the rejection of duplicate case-insensitive product names, zero sales quantities, invalid payment methods, negative stock quantities, and restricted category deletions.
+
+**Result: PASS — All database acceptance checks satisfied.**
 
 ## Docker compatibility and handoff
 
