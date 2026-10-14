@@ -7,7 +7,7 @@ const env = process.env.NODE_ENV || 'development';
 // Load .env everywhere except production (dev and test both need it)
 if (env !== 'production') {
   dotenv.config({
-    path: path.resolve(__dirname, '..', '.env'),
+    path: path.resolve(__dirname, '..', '..', '.env'),
     quiet: true,
   });
 }
