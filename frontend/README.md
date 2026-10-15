@@ -1,16 +1,32 @@
-# React + Vite
+# Campus Store Sales Tracker — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React and Vite frontend for the Campus Store Sales Tracker. It provides the dashboard, product management, sales entry/history, search and filters, and low-stock indicators from the API.
 
-Currently, two official plugins are available:
+## Run locally
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Use a terminal in the `frontend` directory (not VS Code Live Server):
 
-## React Compiler
+```powershell
+npm install
+npm start
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Then open <http://localhost:3000>. The `start` script launches Vite on port 3000. Keep that terminal open while using the app; press `Ctrl+C` there to stop it.
 
-## Expanding the Oxlint configuration
+Vite proxies `/api` requests to `http://localhost:8000` by default. Start the backend separately, or set `API_PROXY_TARGET` to its URL. The browser-facing API base defaults to `/api` (`VITE_API_URL`). For the full stack, follow the repository's Docker Compose instructions.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+## Checks
+
+```powershell
+npm run lint
+npm run build
+```
+
+## Frontend conventions
+
+- The frontend consumes the backend API; it does not calculate stock status. Display the API's `is_low_stock` value.
+- Format prices as Ghanaian cedi (for example, `GHS 1,234.50`).
+- Show loading, empty, retryable error, and form validation states.
+- Keep configuration in environment variables; only `VITE_*` variables are exposed to browser code. `API_PROXY_TARGET` is used by Vite's server proxy and is not a browser variable.
+
+See [`../docs/frontend-technical-documentation.md`](../docs/frontend-technical-documentation.md) and [`../dev_docs/05-api-reference.md`](../dev_docs/05-api-reference.md) for the frontend feature and API contracts.
