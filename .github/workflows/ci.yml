@@ -27,3 +27,47 @@ jobs:
 
       - name: Test Docker Compose Build
         run: docker compose build
+
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: store_admin
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: campus_store_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U store_admin -d campus_store_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://store_admin:ci_password@localhost:5432/campus_store_test
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
