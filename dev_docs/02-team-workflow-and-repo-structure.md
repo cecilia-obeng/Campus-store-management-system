@@ -75,7 +75,7 @@ The current branches are **not** consistent with each other. This is what we fou
 | # | Finding | Where | Fix | Owner |
 |---|---------|-------|-----|-------|
 | S1 | Backend docs lived in `backend/sys_docs/` and `backend/docs/`; other branches use a root `docs/` folder. | former `backend-system` | ✅ Done: team docs now live in root **`dev_docs/`**; old drafts removed. | Joseph |
-| S2 | `backend-system` was behind `main` (missing `0a4606a`, `d1a8f5e`). | former `backend-system` | ✅ Done: branch deleted; **`feature/backend-setup`** created from the latest `main`, with the backend folder structure. | Joseph |
+| S2 | `backend-system` was behind `main` (missing `0a4606a`, `d1a8f5e`). | former `backend-system` | ✅ Done: branch deleted; **`feature/backend-setup`** created from the latest `main`. The backend `src/` and `tests/` structure is built by the backend developer as part of CS-20. | Joseph |
 | S3 | The schema proposal said `database/init/01_schema.sql`; Samuel kept `database/init.sql`, `seed.sql`, `verify.sql`. | `database` | **Keep Samuel's paths.** They work with the existing Compose mount, and alphabetical order (init → seed → verify) is correct. | n/a (decided) |
 | S4 | The `database` branch has a root `README.md` describing only the database. It will conflict with the project README. | `database` | Move it to `database/README.md` before merging. | Samuel |
 | S5 | The `database` and `feature/frontend-setup` branches add root `docs/…` files. | both | Fine to keep as the owners' original documents. `dev_docs/` is the consolidated, agreed set; add a link to it from `docs/` if useful. | Samuel, Cecilia |

@@ -51,7 +51,7 @@ The sources compared were the mentor brief; `main` (DevOps PR #1); the `database
 | A-03 | API port | Backend draft: 4000 | Compose/Dockerfile: 8000 | **8000** | n/a | ✅ |
 | A-04 | DB config | Backend draft: `DB_HOST`… | Compose: `DATABASE_URL` | **`DATABASE_URL`** | n/a | ✅ |
 | A-05 | Node / Postgres versions | Drafts: Node 24, PG 16; schema tested on PG 18 | Merged: Node 20, PG 15 | **Node 20, PG 15** (the schema uses nothing newer) | n/a | ✅ |
-| A-06 | Frontend API env var | Compose: `REACT_APP_API_URL`; `.env.example`: `NEXT_PUBLIC_API_URL` | Frontend is Vite | **`VITE_API_URL`** + `API_PROXY_TARGET` | Nana Yaw (C1) | ⏳ 🔴 |
+| A-06 | Frontend API env var | Compose: `REACT_APP_API_URL`; `.env.example`: `NEXT_PUBLIC_API_URL` | Frontend is Vite | **`VITE_API_URL`** + `API_PROXY_TARGET` | Nana Yaw (C1) | ✅ |
 | A-07 | Same-origin `/api` | Frontend design: "through the frontend proxy" | Compose: no Nginx, Vite dev server on 3000 | Vite `server.proxy` (ADR-010) | Cecilia | ⏳ |
 | A-08 | Schema file path | Change request: `database/init/01_schema.sql` | DB branch: `database/init.sql` | `database/init.sql` (D-10) | n/a | ✅ |
 | A-09 | Docs location | Backend: `backend/sys_docs`, `backend/docs` | Others: root `docs/` | Root **`dev_docs/`** for the agreed set; old drafts removed | Joseph | ✅ |
