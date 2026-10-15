@@ -36,9 +36,29 @@ function toProduct(row) {
   };
 }
 
+
+function toSale(row) {
+  return {
+    id: row.id,
+    product_id: row.product_id,
+    product_name: row.product_name,
+    category_id: row.category_id,
+    category_name: row.category_name,
+    quantity: row.quantity,
+    unit_price: toNumber(row.unit_price),
+    total: toNumber(row.total),
+    payment_method: row.payment_method,
+    sale_date: row.sale_date,
+    created_at: row.created_at,
+  };
+}
+
+
+
 module.exports = {
   toNumber,
   isLowStock,
   toCategory,
   toProduct,
+  toSale,
 };

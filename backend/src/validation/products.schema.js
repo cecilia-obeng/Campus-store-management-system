@@ -1,5 +1,5 @@
 const { z } = require('zod');
-const { MAX_INT, queryInt, pagination } = require('./common');
+const { MAX_INT, queryInt, requiredOr, pagination } = require('./common');
 
 const SORT_OPTIONS = [
   'name',
@@ -30,11 +30,6 @@ const listProductsQuery = z.object({
     .default('name'),
   ...pagination,
 });
-
-// Picks the message for a missing field vs. a field of the wrong type.
-function requiredOr(requiredMessage, typeMessage) {
-  return (issue) => (issue.input === undefined ? requiredMessage : typeMessage);
-}
 
 // True if the number has at most 2 digits after the decimal point.
 // Uses the number's text form, because float maths (4.35 * 100) is inexact.
