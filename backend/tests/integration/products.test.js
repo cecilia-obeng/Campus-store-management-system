@@ -6,6 +6,11 @@ const { resetDb } = require('../helpers/resetDb');
 // Fixture (tests/helpers/resetDb.js): 1 Cola, 2 Water, 3 Chips, 4 Gum.
 // Water (10/10) and Chips (3/5) are low on stock; Cola has 2 sales, Gum none.
 
+
+const PEN = { name: 'Pilot Pen Blue', category_id: 2, price: 4.5, stock_quantity: 120 };
+
+
+
 // Names of the products in a list response, in order.
 function names(res) {
   return res.body.data.map((product) => product.name);
@@ -96,3 +101,103 @@ describe('GET /api/products: filtering and pagination', () => {
     expect(res.body.error.details.map((detail) => detail.field)).toEqual(['sort', 'limit']);
   });
 });
+
+describe('create, get, update and delete', () => {
+  it('creates a product: 201, Location header, trimmed name, default reorder level', async () => {
+    const res = await request(app)
+      .post('/api/products')
+      .send({ ...PEN, name: '  Pilot Pen Blue  ', unknown_field: true });
+
+    expect(res.status).toBe(201);
+    expect(res.headers.location).toBe('/api/products/5');
+    expect(res.body.data).toMatchObject({
+      id: 5,
+      name: 'Pilot Pen Blue',
+      category_name: 'Snacks',
+      price: 4.5,
+      reorder_level: 10,
+      is_low_stock: false,
+    });
+    expect(res.body.data).not.toHaveProperty('unknown_field');
+  });
+
+  it('gets one product by id', async () => {
+    const res = await request(app).get('/api/products/2');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({ id: 2, name: 'Water', price: 5, is_low_stock: true });
+  });
+
+  it('returns 404 for a product that does not exist, and 400 for an id that is not a number', async () => {
+    const missing = await request(app).get('/api/products/999');
+    const notANumber = await request(app).get('/api/products/abc');
+
+    expect(missing.status).toBe(404);
+    expect(missing.body.error).toEqual({ code: 'NOT_FOUND', message: 'Product 999 was not found.' });
+    expect(notANumber.status).toBe(400);
+    expect(notANumber.body.error.details).toEqual([
+      { field: 'id', message: 'Id must be a whole number.' },
+    ]);
+  });
+
+  it('updates a product as a full replacement (a missing reorder_level goes back to 10)', async () => {
+    const res = await request(app)
+      .put('/api/products/3')
+      .send({ name: 'Chips XL', category_id: 2, price: 13, stock_quantity: 40 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({
+      id: 3,
+      name: 'Chips XL',
+      price: 13,
+      stock_quantity: 40,
+      reorder_level: 10,
+      is_low_stock: false,
+    });
+  });
+
+  it('moves updated_at forward on update (the database trigger)', async () => {
+    const before = await request(app).get('/api/products/1');
+    const res = await request(app)
+      .put('/api/products/1')
+      .send({ name: 'Cola', category_id: 1, price: 11, stock_quantity: 50 });
+
+    // The fixture's timestamps are 2026-01-01, so any real "now" is later.
+    expect(before.body.data.updated_at).toBe('2026-01-01T00:00:00.000Z');
+    expect(res.body.data.updated_at > '2026-01-01T00:00:00.000Z').toBe(true);
+    expect(res.body.data.created_at).toBe('2026-01-01T00:00:00.000Z');
+  });
+
+  it('keeps the unit_price of past sales when the product price changes', async () => {
+    await request(app)
+      .put('/api/products/1')
+      .send({ name: 'Cola', category_id: 1, price: 99, stock_quantity: 50 });
+
+    const { rows } = await db.query('SELECT DISTINCT unit_price FROM sales WHERE product_id = 1');
+    expect(rows).toEqual([{ unit_price: '10.00' }]);
+  });
+
+  it('returns 404 when updating a product that does not exist', async () => {
+    const res = await request(app).put('/api/products/999').send(PEN);
+
+    expect(res.status).toBe(404);
+  });
+
+  it('marks a product low on stock when stock equals the reorder level', async () => {
+    const res = await request(app)
+      .put('/api/products/1')
+      .send({ name: 'Cola', category_id: 1, price: 10, stock_quantity: 10, reorder_level: 10 });
+
+    expect(res.body.data.is_low_stock).toBe(true);
+  });
+
+  it('deletes a product that was never sold: 204, then 404', async () => {
+    const res = await request(app).delete('/api/products/4');
+    const after = await request(app).get('/api/products/4');
+
+    expect(res.status).toBe(204);
+    expect(res.text).toBe('');
+    expect(after.status).toBe(404);
+  });
+});
+
