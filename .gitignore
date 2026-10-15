@@ -147,3 +147,8 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Personal backend guides (not shared)
+backend/guide/
+
+backend/issues/

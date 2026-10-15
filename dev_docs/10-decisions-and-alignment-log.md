@@ -12,7 +12,7 @@
 
 | ID | Decision | Rationale | Agreed by | Status |
 |----|----------|-----------|-----------|--------|
-| D-01 | **Low stock = `stock_quantity <= reorder_level`** ("at or below") | Already implemented in Samuel's `verify.sql` and database README; it is the standard reorder-point meaning. The API calculates `is_low_stock`, so the frontend only displays it. **Supersedes** the `<` in the frontend design and the earlier API draft. | Joseph, Samuel; Cecilia to confirm | Accepted (pending Cecilia's ack) |
+| D-01 | **Low stock = `stock_quantity <= reorder_level`** ("at or below") | Already implemented in Samuel's `verify.sql` and database README; it is the standard reorder-point meaning. The API calculates `is_low_stock`, so the frontend only displays it. **Supersedes** the `<` in the frontend design and the earlier API draft. | Joseph, Samuel, Cecilia (acknowledged 13 Oct 2026) | Accepted |
 | D-02 | One sale = one product line; order = one `sales` row | Brief; keeps the KPIs simple | All | Accepted |
 | D-03 | `sales.unit_price` snapshots the product price; the client can't send a price | Past revenue stays stable; prevents tampering | All | Accepted |
 | D-04 | Cancelling a sale **deletes** it and restores stock (no `status`) | Avoids a `status` filter in every KPI query (the app and Power BI could disagree). Trade-off: no cancellation history. | Joseph, Samuel | Accepted (v1) |
@@ -46,13 +46,13 @@ The sources compared were the mentor brief; `main` (DevOps PR #1); the `database
 
 | # | Topic | Source A | Source B | Resolution | Owner of follow-up | Status |
 |---|-------|----------|----------|------------|--------------------|--------|
-| A-01 | Low-stock comparison | Frontend design / API draft: `<` | DB `verify.sql` + README: `<=` | `<=` (D-01) | Cecilia ack | ⏳ |
+| A-01 | Low-stock comparison | Frontend design / API draft: `<` | DB `verify.sql` + README: `<=` | `<=` (D-01) | Cecilia | ✅ |
 | A-02 | Product "active status" | Frontend design shows it | Schema removed `is_active` | Removed from the UI | Cecilia | ⏳ |
 | A-03 | API port | Backend draft: 4000 | Compose/Dockerfile: 8000 | **8000** | n/a | ✅ |
 | A-04 | DB config | Backend draft: `DB_HOST`… | Compose: `DATABASE_URL` | **`DATABASE_URL`** | n/a | ✅ |
 | A-05 | Node / Postgres versions | Drafts: Node 24, PG 16; schema tested on PG 18 | Merged: Node 20, PG 15 | **Node 20, PG 15** (the schema uses nothing newer) | n/a | ✅ |
-| A-06 | Frontend API env var | Compose: `REACT_APP_API_URL`; `.env.example`: `NEXT_PUBLIC_API_URL` | Frontend is Vite | **`VITE_API_URL`** + `API_PROXY_TARGET` | Nana Yaw (C1) | ⏳ 🔴 |
-| A-07 | Same-origin `/api` | Frontend design: "through the frontend proxy" | Compose: no Nginx, Vite dev server on 3000 | Vite `server.proxy` (ADR-010) | Cecilia | ⏳ |
+| A-06 | Frontend API env var | Compose: `REACT_APP_API_URL`; `.env.example`: `NEXT_PUBLIC_API_URL` | Frontend is Vite | **`VITE_API_URL`** + `API_PROXY_TARGET` | Nana Yaw (C1) | ✅ |
+| A-07 | Same-origin `/api` | Frontend design: "through the frontend proxy" | Compose: no Nginx, Vite dev server on 3000 | Vite `server.proxy` (ADR-010), configured with `API_PROXY_TARGET` | Cecilia | ✅ |
 | A-08 | Schema file path | Change request: `database/init/01_schema.sql` | DB branch: `database/init.sql` | `database/init.sql` (D-10) | n/a | ✅ |
 | A-09 | Docs location | Backend: `backend/sys_docs`, `backend/docs` | Others: root `docs/` | Root **`dev_docs/`** for the agreed set; old drafts removed | Joseph | ✅ |
 | A-10 | DB branch root README | `database` branch replaces the root README | `main` has the project README | Move it to `database/README.md` | Samuel | ⏳ |

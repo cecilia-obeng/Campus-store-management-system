@@ -1,1 +1,17 @@
-* @nyodoi-dev
+# Default owner
+*                                  @nyodoi-dev
+
+# dev_docs
+/backend/                          @nyodoi-dev @cecilia-obeng
+/frontend/                         @joedrake0909 @nyodoi-dev
+/database/                         @joedrake0909
+/analytics/                        @joedrake0909
+/docker-compose.yml                @joedrake0909 @Samuel-1937
+/.github/                          @joedrake0909 @Samuel-1937
+/devops/                           @joedrake0909 @Samuel-1937
+**/Dockerfile                      @joedrake0909 @Samuel-1937
+
+# Frozen contracts 
+/dev_docs/04-database-schema.md    @joedrake0909 @Samuel-1937
+/dev_docs/05-api-reference.md      @cecilia-obeng @Samuel-1937
+/dev_docs/openapi.yaml             @cecilia-obeng @Samuel-1937

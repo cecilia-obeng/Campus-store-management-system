@@ -34,9 +34,9 @@
 ```mermaid
 flowchart TB
     subgraph app["Express app (src/app.js)"]
-      MW1["express.json (100 kb)"] --> MW2[cors]
-      MW2 --> MW3[requestLogger]
-      MW3 --> R["routes/ (mounted at /api)"]
+      MW0[requestLogger] --> MW1["express.json (100 kb)"]
+      MW1 --> MW2[cors]
+      MW2 --> R["routes/ (mounted at /api)"]
       R --> C["controllers/: parse input with zod, call service, send status"]
       C --> V["validation/: zod schemas"]
       C --> S["services/: business rules, SQL, transactions"]
@@ -104,9 +104,9 @@ Module system: **CommonJS** (`require`), matching the existing `server.js`.
 
 Middleware order in `app.js` (order matters):
 
-1. `express.json({ limit: '100kb' })`. Malformed JSON → `INVALID_JSON` (400).
-2. `cors({ origin: config.corsOrigins })`
-3. `requestLogger`: logs `METHOD path status ms` when the response finishes
+1. `requestLogger`: logs `METHOD path status ms` when the response finishes. It goes first so requests that fail in a later middleware (malformed JSON, body too large) are still logged; an error skips every normal middleware after the one that raised it.
+2. `express.json({ limit: '100kb' })`. Malformed JSON → `INVALID_JSON` (400).
+3. `cors({ origin: config.corsOrigins })`
 4. `app.use('/api', routes)`
 5. `notFound` → 404 `ROUTE_NOT_FOUND`
 6. `errorHandler` (last; four arguments)
