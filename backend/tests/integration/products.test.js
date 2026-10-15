@@ -201,3 +201,121 @@ describe('create, get, update and delete', () => {
   });
 });
 
+describe('invalid category and validation errors', () => {
+  it('rejects a category that does not exist, on the category_id field', async () => {
+    const res = await request(app)
+      .post('/api/products')
+      .send({ ...PEN, category_id: 999 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toEqual({
+      code: 'VALIDATION_ERROR',
+      message: 'Category 999 does not exist.',
+      details: [{ field: 'category_id', message: 'Category 999 does not exist.' }],
+    });
+  });
+
+  it('also checks the category on update', async () => {
+    const res = await request(app)
+      .put('/api/products/1')
+      .send({ ...PEN, category_id: 999 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.details[0].field).toBe('category_id');
+  });
+
+  it('reports every invalid field at once', async () => {
+    const res = await request(app)
+      .post('/api/products')
+      .send({ name: 'X', category_id: 1, price: -1, stock_quantity: 1.5 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toBe('Request body is invalid.');
+    expect(res.body.error.details).toEqual([
+      { field: 'name', message: 'Name must be 2 to 100 characters.' },
+      { field: 'price', message: 'Price must be 0 or more.' },
+      { field: 'stock_quantity', message: 'Stock quantity must be a whole number, 0 or more.' },
+    ]);
+  });
+
+  it('lists every missing field when the body is empty', async () => {
+    const res = await request(app).post('/api/products').send({});
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.details.map((detail) => detail.message)).toEqual([
+      'Name is required.',
+      'Category is required.',
+      'Price is required.',
+      'Stock quantity is required.',
+    ]);
+  });
+
+  it('rejects a price with more than 2 decimals, and a price sent as text', async () => {
+    const decimals = await request(app)
+      .post('/api/products')
+      .send({ ...PEN, price: 4.555 });
+    const text = await request(app)
+      .post('/api/products')
+      .send({ ...PEN, price: '5' });
+
+    expect(decimals.body.error.details).toEqual([
+      { field: 'price', message: 'Price can have at most 2 decimal places.' },
+    ]);
+    expect(text.body.error.details).toEqual([{ field: 'price', message: 'Price must be a number.' }]);
+  });
+
+  it('answers broken JSON with 400 INVALID_JSON', async () => {
+    const res = await request(app)
+      .post('/api/products')
+      .set('Content-Type', 'application/json')
+      .send('{"bad');
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('INVALID_JSON');
+  });
+});
+
+describe('duplicate names', () => {
+  it('refuses a name that already exists in a different case: 409 DUPLICATE', async () => {
+    const res = await request(app)
+      .post('/api/products')
+      .send({ ...PEN, name: 'cOLA' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toEqual({
+      code: 'DUPLICATE',
+      message: "A product named 'cOLA' already exists.",
+    });
+  });
+
+  it('refuses to rename a product to an existing name', async () => {
+    const res = await request(app)
+      .put('/api/products/2')
+      .send({ ...PEN, name: 'COLA' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('DUPLICATE');
+  });
+});
+
+describe('deleting a product that has sales', () => {
+  it('refuses with 409 IN_USE and the number of sales, and keeps the product', async () => {
+    const res = await request(app).delete('/api/products/1');
+    const after = await request(app).get('/api/products/1');
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toEqual({
+      code: 'IN_USE',
+      message: 'Product 1 has 2 sales and cannot be deleted.',
+    });
+    expect(after.status).toBe(200);
+  });
+
+  it('uses the singular for a single sale', async () => {
+    const res = await request(app).delete('/api/products/3');
+
+    expect(res.body.error.message).toBe('Product 3 has 1 sale and cannot be deleted.');
+  });
+});
+
+
