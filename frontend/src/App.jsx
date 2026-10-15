@@ -165,6 +165,7 @@ export default function App() {
   useEffect(() => {
     if (apiMode !== 'connected') return
     let cancelled = false
+    let movingToLastPage = false
     const params = new URLSearchParams({ page: String(productPage), limit: '20', sort: 'name' })
     if (debouncedSearch) params.set('search', debouncedSearch)
     if (category !== 'all') params.set('category_id', category)
@@ -176,6 +177,12 @@ export default function App() {
       })
       .then(payload => {
         if (!Array.isArray(payload.data) || !payload.meta) throw new Error('Unexpected product list response')
+        const lastPage = Math.max(1, Math.ceil(payload.meta.total / payload.meta.limit))
+        if (productPage > lastPage) {
+          movingToLastPage = true
+          if (!cancelled) setProductPage(lastPage)
+          return
+        }
         if (!cancelled) {
           setProductPageItems(payload.data)
           setProductMeta(payload.meta)
@@ -183,7 +190,7 @@ export default function App() {
         }
       })
       .catch(() => { if (!cancelled) setProductPageError('Products could not be loaded. Retry to try again.') })
-      .finally(() => { if (!cancelled) setProductPageLoading(false) })
+      .finally(() => { if (!cancelled && !movingToLastPage) setProductPageLoading(false) })
     return () => { cancelled = true }
   }, [apiMode, productPage, debouncedSearch, category, lowOnly, retry])
 
@@ -367,6 +374,9 @@ export default function App() {
     try {
       if (apiMode === 'connected') await apiRequest('/products/' + product.id, { method: 'DELETE' })
       setProducts(current => current.filter(item => item.id !== product.id))
+      if (apiMode !== 'connected' && visibleProducts.length === 1 && productPage > 1) {
+        setProductPage(page => Math.max(1, page - 1))
+      }
       refreshApiData()
       showNotice(apiMode === 'connected' ? 'Product deleted.' : 'Demo product removed for this session.')
     } catch (error) {
