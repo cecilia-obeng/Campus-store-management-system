@@ -131,11 +131,32 @@ export default function App() {
       .catch(() => {
         if (!cancelled) {
           setApiMode('demo')
+          setProducts(seedProducts)
+          setCategories(fallbackCategoryOptions)
+          setProductPageItems([])
+          setProductMeta({ page: 1, limit: 20, total: seedProducts.length })
+          setProductPage(1)
+          setProductPageError('')
           setProductPageLoading(false)
+          setCategoriesError('')
           setCategoriesLoading(false)
+          setSales(seedSales)
+          setSalesPage(1)
+          setSalesError('')
           setSalesLoading(false)
+          setSummary(null)
+          setSummaryError('')
           setSummaryLoading(false)
+          setDailyData([])
+          setDailyError('')
           setDailyLoading(false)
+          setSearch('')
+          setDebouncedSearch('')
+          setCategory('all')
+          setLowOnly(false)
+          setSaleFilters({ from: '', to: '', payment: 'all', product: 'all' })
+          setActionError('')
+          setFieldErrors({})
           setLoadError('The API is unavailable. You can explore the sample products or retry.')
         }
       })
@@ -352,7 +373,9 @@ export default function App() {
           id: existing?.id || Math.max(0, ...products.map(product => product.id)) + 1,
           name, category_id: body.category_id, category_name: categoryName,
           price: body.price, stock_quantity: body.stock_quantity, reorder_level: body.reorder_level,
-          is_low_stock: existing?.is_low_stock ?? false,
+          // Demo mode mimics the API's product response. Live products always
+          // use the server-provided is_low_stock value.
+          is_low_stock: body.stock_quantity <= body.reorder_level,
           created_at: existing?.created_at || isoNow(), updated_at: isoNow(),
         }
         setProducts(current => existing ? current.map(product => product.id === mock.id ? mock : product) : [mock, ...current])
