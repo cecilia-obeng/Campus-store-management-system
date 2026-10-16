@@ -216,10 +216,27 @@ async function correct(id, input) {
   });
 }
 
+// DELETE /api/sales/:id. The sale is deleted (D-04: no "cancelled" status in v1)
+// and its quantity goes back to stock, both in one transaction.
+async function cancel(id) {
+  await db.withTransaction(async (client) => {
+    const { rows } = await client.query(
+      'DELETE FROM sales WHERE id = $1 RETURNING product_id, quantity',
+      [id],
+    );
+    if (rows.length === 0) {
+      throw notFound(`Sale ${id} was not found.`);
+    }
+    await returnStock(client, rows[0].product_id, rows[0].quantity);
+  });
+}
+
+
 
 module.exports = {
   list,
   getById,
   record,
   correct,
+  cancel,
 };

@@ -20,6 +20,8 @@ router.delete('/products/:id', productController.remove);
 router.get('/sales', saleController.list);
 router.post('/sales', saleController.create);
 router.get('/sales/:id', saleController.get);
+router.put('/sales/:id', saleController.update);
+router.delete('/sales/:id', saleController.remove);
 
 
 module.exports = router;

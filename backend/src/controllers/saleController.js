@@ -28,9 +28,16 @@ async function update(req, res) {
   res.json({ data });
 }
 
+async function remove(req, res) {
+  const { id } = parse(idParam, req.params, 'Sale id is invalid.');
+  await saleService.cancel(id);
+  res.status(204).end();
+}
+
 module.exports = {
   list,
   get,
   create,
   update,
+  remove,
 };
