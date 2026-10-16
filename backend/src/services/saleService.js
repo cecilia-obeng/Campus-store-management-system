@@ -44,12 +44,88 @@ async function takeStock(client, productId, quantity) {
   );
 }
 
-// Must run on the transaction's client: before COMMIT, the new sale
-// is invisible to every other connection.
+// Pass the transaction's client inside a transaction (before COMMIT, a new or
+// changed sale is invisible to other connections), or db for a plain read.
 async function findSale(client, id) {
   const { rows } = await client.query(`${SALE_SELECT} WHERE s.id = $1`, [id]);
   return rows[0];
 }
+
+
+// ORDER BY can't take $n parameters, so user input only picks a key here.
+// The tie-breaker goes the same direction, so equal values keep a fixed order.
+const SALE_SORT_SQL = {
+  sale_date: 's.sale_date ASC, s.id ASC',
+  '-sale_date': 's.sale_date DESC, s.id DESC',
+  total: '(s.quantity * s.unit_price) ASC, s.id ASC',
+  '-total': '(s.quantity * s.unit_price) DESC, s.id DESC',
+};
+
+// Builds "WHERE ..." from the list filters. Dates are whole days in UTC:
+// from = midnight UTC that day; to = up to (not including) midnight UTC after it.
+function buildSalesWhere(filters) {
+  const conditions = [];
+  const values = [];
+
+  if (filters.from !== undefined) {
+    values.push(filters.from);
+    conditions.push(`s.sale_date >= $${values.length}::date::timestamp AT TIME ZONE 'UTC'`);
+  }
+  if (filters.to !== undefined) {
+    values.push(filters.to);
+    conditions.push(`s.sale_date < ($${values.length}::date + 1)::timestamp AT TIME ZONE 'UTC'`);
+  }
+  if (filters.product_id !== undefined) {
+    values.push(filters.product_id);
+    conditions.push(`s.product_id = $${values.length}`);
+  }
+  if (filters.category_id !== undefined) {
+    values.push(filters.category_id);
+    conditions.push(`p.category_id = $${values.length}`);
+  }
+  if (filters.payment_method !== undefined) {
+    values.push(filters.payment_method);
+    conditions.push(`s.payment_method = $${values.length}`);
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  return { where, values };
+}
+
+async function list(filters) {
+  const { where, values } = buildSalesWhere(filters);
+  const offset = (filters.page - 1) * filters.limit;
+  const limitParam = values.length + 1;
+  const offsetParam = values.length + 2;
+
+  const [pageResult, countResult] = await Promise.all([
+    db.query(
+      `${SALE_SELECT} ${where} ORDER BY ${SALE_SORT_SQL[filters.sort]} LIMIT $${limitParam} OFFSET $${offsetParam}`,
+      [...values, filters.limit, offset],
+    ),
+    // The JOIN is needed because category_id lives on products, not on sales.
+    db.query(
+      `SELECT COUNT(*)::int AS total FROM sales s JOIN products p ON p.id = s.product_id ${where}`,
+      values,
+    ),
+  ]);
+
+  return {
+    data: pageResult.rows.map(toSale),
+    meta: { page: filters.page, limit: filters.limit, total: countResult.rows[0].total },
+  };
+}
+
+// A plain read, so no transaction: db.query sees every committed sale.
+async function getById(id) {
+  const sale = await findSale(db, id);
+  if (!sale) {
+    throw notFound(`Sale ${id} was not found.`);
+  }
+  return toSale(sale);
+}
+
+
 
 async function record(input) {
   return db.withTransaction(async (client) => {
@@ -78,5 +154,7 @@ async function record(input) {
 }
 
 module.exports = {
+  list,
+  getById,
   record,
 };
