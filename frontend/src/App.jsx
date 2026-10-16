@@ -131,11 +131,32 @@ export default function App() {
       .catch(() => {
         if (!cancelled) {
           setApiMode('demo')
+          setProducts(seedProducts)
+          setCategories(fallbackCategoryOptions)
+          setProductPageItems([])
+          setProductMeta({ page: 1, limit: 20, total: seedProducts.length })
+          setProductPage(1)
+          setProductPageError('')
           setProductPageLoading(false)
+          setCategoriesError('')
           setCategoriesLoading(false)
+          setSales(seedSales)
+          setSalesPage(1)
+          setSalesError('')
           setSalesLoading(false)
+          setSummary(null)
+          setSummaryError('')
           setSummaryLoading(false)
+          setDailyData([])
+          setDailyError('')
           setDailyLoading(false)
+          setSearch('')
+          setDebouncedSearch('')
+          setCategory('all')
+          setLowOnly(false)
+          setSaleFilters({ from: '', to: '', payment: 'all', product: 'all' })
+          setActionError('')
+          setFieldErrors({})
           setLoadError('The API is unavailable. You can explore the sample products or retry.')
         }
       })
@@ -352,7 +373,9 @@ export default function App() {
           id: existing?.id || Math.max(0, ...products.map(product => product.id)) + 1,
           name, category_id: body.category_id, category_name: categoryName,
           price: body.price, stock_quantity: body.stock_quantity, reorder_level: body.reorder_level,
-          is_low_stock: existing?.is_low_stock ?? false,
+          // Demo mode mimics the API's product response. Live products always
+          // use the server-provided is_low_stock value.
+          is_low_stock: body.stock_quantity <= body.reorder_level,
           created_at: existing?.created_at || isoNow(), updated_at: isoNow(),
         }
         setProducts(current => existing ? current.map(product => product.id === mock.id ? mock : product) : [mock, ...current])
@@ -486,7 +509,7 @@ export default function App() {
           <div className="heading"><div><small>INVENTORY</small><h1>Products</h1><p>Manage your catalogue and stock levels.</p></div><button className="primary" disabled={apiMode === 'connected' && (categoriesLoading || Boolean(categoriesError))} onClick={() => { setActionError(''); setProductDialog({}) }}>+ Add product</button></div>
           {categoriesError && <div className="error-banner" role="alert">{categoriesError}<button onClick={() => setRetry(value => value + 1)}>Retry</button></div>}
           <div className="filters"><input aria-label="Search products" placeholder="Search by product name..." value={search} onChange={event => setSearch(event.target.value)} /><select aria-label="Filter by category" value={category} onChange={event => { setCategory(event.target.value); setProductPage(1); if (apiMode === 'connected') { setProductPageLoading(true); setProductPageError('') } }}><option value="all">All categories</option>{categoryOptions.map(option => <option key={option.id} value={option.id}>{option.name}</option>)}</select><label className="toggle"><input type="checkbox" checked={lowOnly} onChange={event => { setLowOnly(event.target.checked); setProductPage(1); if (apiMode === 'connected') { setProductPageLoading(true); setProductPageError('') } }} />Low stock only</label><span>{productTotal} products</span></div>
-          {loading || productPageLoading ? <div className="panel state" role="status">Loading products…</div> : loadError ? <div className="panel state" role="alert">Products could not be loaded. Use Retry above to try again.</div> : productPageError ? <div className="panel state" role="alert">{productPageError}<button onClick={() => { setProductPageLoading(true); setRetry(value => value + 1) }}>Retry</button></div> : visibleProducts.length === 0 ? <div className="panel state">{debouncedSearch || category !== 'all' || lowOnly ? 'No products match these filters.' : 'No products yet. Add the first product to get started.'}</div> : <>
+          {loading || productPageLoading ? <div className="panel state" role="status">Loading products…</div> : productPageError ? <div className="panel state" role="alert">{productPageError}<button onClick={() => { setProductPageLoading(true); setRetry(value => value + 1) }}>Retry</button></div> : visibleProducts.length === 0 ? <div className="panel state">{debouncedSearch || category !== 'all' || lowOnly ? 'No products match these filters.' : 'No products yet. Add the first product to get started.'}</div> : <>
             <ProductCards products={visibleProducts} onEdit={product => { setActionError(''); setProductDialog(product) }} onDelete={deleteProduct} />
             {productPageCount > 1 && <nav className="pagination" aria-label="Product pages"><button disabled={productPage <= 1} onClick={() => { if (apiMode === 'connected') { setProductPageLoading(true); setProductPageError('') } setProductPage(value => Math.max(1, value - 1)) }}>Previous</button><span>Page {productPage} of {productPageCount}</span><button disabled={productPage >= productPageCount} onClick={() => { if (apiMode === 'connected') { setProductPageLoading(true); setProductPageError('') } setProductPage(value => Math.min(productPageCount, value + 1)) }}>Next</button></nav>}
           </>}
