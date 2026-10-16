@@ -126,6 +126,20 @@ async function getById(id) {
 }
 
 
+// Gives units back to a product's stock (a correction downwards, or a cancel).
+// Returns the stock after the change and the reorder level.
+async function returnStock(client, productId, quantity) {
+  const { rows } = await client.query(
+    `UPDATE products
+     SET stock_quantity = stock_quantity + $2
+     WHERE id = $1
+     RETURNING stock_quantity, reorder_level`,
+    [productId, quantity],
+  );
+  return rows[0];
+}
+
+
 
 async function record(input) {
   return db.withTransaction(async (client) => {
@@ -153,8 +167,59 @@ async function record(input) {
   });
 }
 
+// PUT /api/sales/:id. Stock moves by the DIFFERENCE between the new and the old
+// quantity, in the same transaction as the change to the sale.
+async function correct(id, input) {
+  return db.withTransaction(async (client) => {
+    // FOR UPDATE locks this sale row until COMMIT: a second correction or a
+    // cancel of the same sale waits here, then reads the quantity we wrote.
+    const { rows } = await client.query(
+      'SELECT product_id, quantity FROM sales WHERE id = $1 FOR UPDATE',
+      [id],
+    );
+    if (rows.length === 0) {
+      throw notFound(`Sale ${id} was not found.`);
+    }
+    const { product_id: productId, quantity: oldQuantity } = rows[0];
+
+    const delta = input.quantity === undefined ? 0 : input.quantity - oldQuantity;
+    let stock;
+    if (delta > 0) {
+      stock = await takeStock(client, productId, delta);
+    } else if (delta < 0) {
+      stock = await returnStock(client, productId, -delta);
+    } else {
+      // Nothing to move. Read only: an UPDATE would touch products.updated_at.
+      const current = await client.query(
+        'SELECT stock_quantity, reorder_level FROM products WHERE id = $1',
+        [productId],
+      );
+      stock = current.rows[0];
+    }
+
+    // COALESCE($n, column): the new value if one was sent, otherwise the old one.
+    await client.query(
+      `UPDATE sales
+       SET quantity = COALESCE($2, quantity),
+           payment_method = COALESCE($3, payment_method),
+           sale_date = COALESCE($4::timestamptz, sale_date)
+       WHERE id = $1`,
+      [id, input.quantity ?? null, input.payment_method ?? null, input.sale_date ?? null],
+    );
+
+    const sale = await findSale(client, id);
+    return {
+      ...toSale(sale),
+      product_stock_after: stock.stock_quantity,
+      is_low_stock: isLowStock(stock.stock_quantity, stock.reorder_level),
+    };
+  });
+}
+
+
 module.exports = {
   list,
   getById,
   record,
+  correct,
 };
