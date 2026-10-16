@@ -69,6 +69,35 @@ const saleDate = z
     'Sale date cannot be in the future.',
   );
 
+// A calendar date in a query string ("2026-10-13"). The regex checks the shape
+// (abort: skip the next check if it fails); the round trip rejects dates that
+// don't exist, like 2026-02-30.
+function queryDate(label) {
+  const message = `${label} must be a real date written as YYYY-MM-DD.`;
+  return z
+    .string({ error: message })
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { message, abort: true })
+    .refine((value) => {
+      const date = new Date(`${value}T00:00:00Z`);
+      return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+    }, message);
+}
+
+// Adds "from may not be after to" to a query schema with optional from/to dates.
+// YYYY-MM-DD strings sort like the dates they stand for, so <= on text is enough.
+// `when`: only compare once both dates are valid, so one mistake gives one message.
+function checkDateRange(schema) {
+  return schema.refine(
+    (query) => query.from === undefined || query.to === undefined || query.from <= query.to,
+    {
+      message: 'From date must be on or before the to date.',
+      path: ['from'],
+      when: (payload) => payload.issues.length === 0,
+    },
+  );
+}
+
+
 module.exports = {
   MAX_INT,
   PAYMENT_METHODS,
@@ -79,4 +108,6 @@ module.exports = {
   quantity,
   paymentMethod,
   saleDate,
+  queryDate,
+  checkDateRange,
 };
