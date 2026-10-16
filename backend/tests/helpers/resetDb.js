@@ -20,7 +20,12 @@ const INIT_SQL = fs.readFileSync(
 //   3   Chips  2         12.50   3      5       YES  (1 sale)
 //   4   Gum    2          2.00 100     10       no   (never sold: can be deleted)
 //
-// Sales: Cola x2 and x1 at 10.00, Chips x1 at 12.50
+// Sales (ids follow the insert order)
+//   id  product  qty  unit price  total  payment       sale_date (UTC)
+//   1   Cola     2    10.00       20.00  cash          2026-09-30 23:30  (late on the last day)
+//   2   Cola     1    10.00       10.00  card          2026-10-01 00:00  (first second of the next)
+//   3   Chips    1    12.50       12.50  mobile_money  2026-10-05 12:00
+
 //
 // Product timestamps are fixed in the past, so "updated_at moved forward"
 // never depends on two clock readings taken milliseconds apart.
@@ -35,10 +40,12 @@ const FIXTURE_SQL = `
     ('Chips', 2, 12.50, 3, 5, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'),
     ('Gum', 2, 2.00, 100, 10, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
 
-  INSERT INTO sales (product_id, quantity, unit_price, payment_method) VALUES
-    (1, 2, 10.00, 'cash'),
-    (1, 1, 10.00, 'card'),
-    (3, 1, 12.50, 'mobile_money');
+  INSERT INTO sales
+    (product_id, quantity, unit_price, payment_method, sale_date)
+  VALUES
+    (1, 2, 10.00, 'cash', '2026-09-30T23:30:00Z'),
+    (1, 1, 10.00, 'card', '2026-10-01T00:00:00Z'),
+    (3, 1, 12.50, 'mobile_money', '2026-10-05T12:00:00Z');
 `;
 
 // Drops everything, rebuilds the schema from init.sql, and loads the fixture.
