@@ -377,26 +377,27 @@ Deletes the sale **and returns its quantity to stock**, in one transaction. The 
 |-------------|---------|
 | `from`, `to` | Optional `YYYY-MM-DD` range, same rules as `/api/sales`. Omit both for all time. |
 
-**200**. This is the real output from a seeded test database on 13 Oct 2026. Your revenue figures may differ until the seed fix in [04 §5](04-database-schema.md#5-seed-data-databaseseedsql) lands; orders and units will match.
+**200**. This is the real output from a freshly seeded database on 16 Oct 2026 (after the seed fix, FIX-08). Totals, AOV, top 5 and the low-stock count are the same on every fresh seed; figures for a date range depend on when the seed ran.
 ```json
 {
   "data": {
     "period": { "from": null, "to": null },
-    "total_revenue": 12044,
+    "total_revenue": 12549.5,
     "total_orders": 200,
-    "average_order_value": 60.22,
+    "average_order_value": 62.75,
     "total_units_sold": 402,
-    "low_stock_count": 0,
+    "low_stock_count": 2,
     "top_products": [
-      { "product_id": 7,  "product_name": "Campus Hoodie",        "category_name": "Campus Merchandise", "units_sold": 20, "revenue": 2900 },
-      { "product_id": 11, "product_name": "USB Flash Drive 32GB", "category_name": "Electronics",        "units_sold": 17, "revenue": 1275 },
-      { "product_id": 9,  "product_name": "Phone Wall Charger",   "category_name": "Electronics",        "units_sold": 13, "revenue": 1105 },
-      { "product_id": 8,  "product_name": "Campus T-Shirt",       "category_name": "Campus Merchandise", "units_sold": 15, "revenue": 975 },
-      { "product_id": 10, "product_name": "Wired Earphones",      "category_name": "Electronics",        "units_sold": 21, "revenue": 945 }
+      { "product_id": 6,  "product_name": "Campus Hoodie",        "category_name": "Campus Merchandise", "units_sold": 20, "revenue": 2900 },
+      { "product_id": 12, "product_name": "Phone Wall Charger",   "category_name": "Electronics",        "units_sold": 20, "revenue": 1700 },
+      { "product_id": 10, "product_name": "USB Flash Drive 32GB", "category_name": "Electronics",        "units_sold": 21, "revenue": 1575 },
+      { "product_id": 5,  "product_name": "Campus T-Shirt",       "category_name": "Campus Merchandise", "units_sold": 16, "revenue": 1040 },
+      { "product_id": 11, "product_name": "Wired Earphones",      "category_name": "Electronics",        "units_sold": 17, "revenue": 765 }
     ]
   }
 }
 ```
+
 
 ### 7.2 Metric definitions (identical in the API, SQL and Power BI)
 | Metric | Definition |
