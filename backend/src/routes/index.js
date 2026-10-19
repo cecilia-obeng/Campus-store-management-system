@@ -3,6 +3,8 @@ const healthController = require('../controllers/healthController');
 const categoryController = require('../controllers/categoryController');
 const productController = require('../controllers/productController');
 const saleController = require('../controllers/saleController');
+const summaryController = require('../controllers/summaryController');
+
 
 // All /api routes are registered here.
 const router = express.Router();
@@ -22,6 +24,8 @@ router.post('/sales', saleController.create);
 router.get('/sales/:id', saleController.get);
 router.put('/sales/:id', saleController.update);
 router.delete('/sales/:id', saleController.remove);
+
+router.get('/summary', summaryController.get);
 
 
 module.exports = router;
