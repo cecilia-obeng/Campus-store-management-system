@@ -36,6 +36,16 @@ function toProduct(row) {
   };
 }
 
+// One row of the summary's top_products (dev_docs/05 Section 7.1).
+function toTopProduct(row) {
+  return {
+    product_id: row.product_id,
+    product_name: row.product_name,
+    category_name: row.category_name,
+    units_sold: row.units_sold,
+    revenue: toNumber(row.revenue),
+  };
+}
 
 function toSale(row) {
   return {
@@ -61,4 +71,5 @@ module.exports = {
   toCategory,
   toProduct,
   toSale,
+  toTopProduct,
 };
