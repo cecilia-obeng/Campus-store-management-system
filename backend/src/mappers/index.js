@@ -47,6 +47,15 @@ function toTopProduct(row) {
   };
 }
 
+// One day of GET /api/summary/daily (dev_docs/05 Section 9.2).
+function toDailyRevenue(row) {
+  return {
+    date: row.date,
+    revenue: toNumber(row.revenue),
+    orders: row.orders,
+  };
+}
+
 function toSale(row) {
   return {
     id: row.id,
@@ -72,4 +81,5 @@ module.exports = {
   toProduct,
   toSale,
   toTopProduct,
+  toDailyRevenue,
 };
