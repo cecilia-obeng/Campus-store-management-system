@@ -502,11 +502,11 @@ components:
           properties:
             from: { type: string, format: date, nullable: true }
             to: { type: string, format: date, nullable: true }
-        total_revenue: { type: number, format: double, example: 12044 }
+        total_revenue: { type: number, format: double, example: 12549.5 }
         total_orders: { type: integer, example: 200 }
-        average_order_value: { type: number, format: double, example: 60.22 }
+        average_order_value: { type: number, format: double, example: 62.75 }
         total_units_sold: { type: integer, example: 402 }
-        low_stock_count: { type: integer, example: 0 }
+        low_stock_count: { type: integer, example: 2 }
         top_products:
           type: array
           maxItems: 5

@@ -110,6 +110,37 @@ Differences found and fixes: …
 
 ---
 
+
+### Running the backend tests
+
+```
+backend/tests/
+├── unit/          mappers and zod schemas; no database needed
+├── integration/   Supertest against a real Postgres, reset from database/init.sql
+└── helpers/       resetDb.js: the small fixture every integration file starts from
+```
+
+The integration tests need a database whose name ends in `_test`. `resetDb()` refuses to touch any other database, so a wrong `DATABASE_URL` can never wipe development data. With the `db` container running (`docker compose up -d db`), create it once:
+
+```bash
+docker exec campus_store_db psql -U store_admin -d postgres -c "CREATE DATABASE campus_store_test"
+```
+
+Then, from `backend/`:
+
+```bash
+# Git Bash / macOS / Linux
+DATABASE_URL=postgresql://store_admin:local_secret_password@localhost:5432/campus_store_test npm test
+
+# PowerShell
+$env:DATABASE_URL = "postgresql://store_admin:local_secret_password@localhost:5432/campus_store_test"; npm test; Remove-Item Env:DATABASE_URL
+```
+
+`npx vitest run tests/unit` runs only the unit tests, without a database. CI runs `npm run lint` and `npm test` on every pull request (the `backend` job).
+
+`docker compose down -v` deletes `campus_store_test` along with the volume; create it again afterwards.
+
+
 ## 5. Sprint review demo script (about 6 minutes)
 
 1. Stack running from `docker compose up --build`; open http://localhost:3000.
