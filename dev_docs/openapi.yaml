@@ -304,6 +304,30 @@ paths:
                   data: { $ref: '#/components/schemas/Summary' }
         '400': { $ref: '#/components/responses/ValidationError' }
 
+  /summary/daily:
+    get:
+      tags: [Summary]
+      summary: Revenue and orders per UTC day (FR-61)
+      description: The last `days` whole UTC days, oldest first, ending today. Days without sales are included with 0. See dev_docs/05-api-reference.md §9.2.
+      operationId: getDailySummary
+      parameters:
+        - name: days
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 90, default: 7 }
+      responses:
+        '200':
+          description: One entry per day
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/DailyRevenue' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+
 components:
   parameters:
     Id:
@@ -511,6 +535,14 @@ components:
           type: array
           maxItems: 5
           items: { $ref: '#/components/schemas/TopProduct' }
+
+    DailyRevenue:
+      type: object
+      required: [date, revenue, orders]
+      properties:
+        date: { type: string, format: date, example: '2026-10-21' }
+        revenue: { type: number, format: double, example: 261 }
+        orders: { type: integer, example: 2 }
 
     ErrorDetail:
       type: object

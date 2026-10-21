@@ -26,6 +26,7 @@ router.put('/sales/:id', saleController.update);
 router.delete('/sales/:id', saleController.remove);
 
 router.get('/summary', summaryController.get);
+router.get('/summary/daily', summaryController.daily);
 
 
 module.exports = router;

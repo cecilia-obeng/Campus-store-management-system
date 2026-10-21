@@ -1,5 +1,5 @@
 const db = require('../db');
-const { toNumber, toTopProduct } = require('../mappers');
+const { toNumber, toTopProduct, toDailyRevenue } = require('../mappers');
 
 // Metric definitions, word for word from dev_docs/05 Section 7.2 (D-09).
 // Samuel's kpi_summary.sql and Power BI use the same ones: change them there too.
@@ -76,6 +76,35 @@ async function get({ from, to }) {
   );
 }
 
+// One row per UTC day, $1 days ending on $2 (today), oldest first.
+// The days come from generate_series, so a day without sales is still a row;
+// the LEFT JOIN then gives it COUNT 0 and a NULL sum, which COALESCE turns into 0.
+// Same day boundaries and revenue definition as the totals above.
+// to_char: pg would turn a DATE into a JS Date at local midnight.
+const DAILY_SQL = `
+  SELECT to_char(d.day, 'YYYY-MM-DD') AS date,
+         ROUND(COALESCE(SUM(s.quantity * s.unit_price), 0), 2) AS revenue,
+         COUNT(s.id)::int AS orders
+  FROM (
+    SELECT $2::date - n AS day
+    FROM generate_series(0, $1::int - 1) AS n
+  ) d
+  LEFT JOIN sales s
+    ON s.sale_date >= d.day::timestamp AT TIME ZONE 'UTC'
+   AND s.sale_date < (d.day + 1)::timestamp AT TIME ZONE 'UTC'
+  GROUP BY d.day
+  ORDER BY d.day
+`;
+
+// "Today" is the API's clock, the one POST /api/sales checks sale_date against,
+// so a sale the API has just accepted always falls inside the chart.
+async function daily({ days }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const { rows } = await db.query(DAILY_SQL, [days, today]);
+  return rows.map(toDailyRevenue);
+}
+
 module.exports = {
   get,
+  daily,
 };
