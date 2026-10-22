@@ -1,12 +1,12 @@
-﻿# Campus Store Sales Tracker
+# Campus Store Sales Tracker
 
 A web application for managing a campus store’s products and sales. It helps staff track inventory, record sales, identify low-stock products, and review sales performance.
 
 ## Features
 
 - View, search, and filter products by name or category.
-- Create and update products.
-- Record sales and view sales history.
+- Create, update, and delete products.
+- Record sales, view sales history, correct a sale, and cancel a sale.
 - Reduce stock automatically when a sale is recorded.
 - Display low-stock status returned by the API (`is_low_stock`). The rule is stock at or below the product’s reorder level.
 - View dashboard KPIs and daily sales data.
@@ -14,11 +14,11 @@ A web application for managing a campus store’s products and sales. It helps s
 
 ## Architecture
 
-- Frontend: React and Vite
-- API: Node.js and Express REST API
-- Database: PostgreSQL
-- Deployment: Docker Compose
-- Analytics: PostgreSQL queries and Power BI
+- **Frontend:** React and Vite
+- **API:** Node.js and Express REST API
+- **Database:** PostgreSQL
+- **Deployment:** Docker Compose
+- **Analytics:** PostgreSQL queries and Power BI
 
 The browser opens the frontend at `http://localhost:3000`. The frontend proxies `/api` requests to the backend at port `8000`. The API reads and writes PostgreSQL; analytics queries use the database for reporting.
 
@@ -79,12 +79,31 @@ The report findings describe the seeded sample dataset. Monthly groupings can sh
 
 ## Checks and CI
 
-Run backend checks from the `backend` directory:
+The backend integration tests require PostgreSQL and a separate database named `campus_store_test`. The tests refuse to reset a database unless its name ends in `_test`.
+
+From the repository root, start PostgreSQL and connect to its default `postgres` database:
 
 ```powershell
+docker compose up -d db
+docker compose exec db psql -U store_admin -d postgres
+```
+
+At the `psql` prompt, create the test database once, then exit. If it already exists, skip the create command:
+
+```sql
+CREATE DATABASE campus_store_test;
+\q
+```
+
+Then run the backend checks from the repository root. These example credentials match `.env.example`; if you changed them, use your local PostgreSQL username and password in `DATABASE_URL`.
+
+```powershell
+$env:DATABASE_URL = "postgresql://store_admin:local_secret_password@localhost:5432/campus_store_test"
+Push-Location backend
 npm ci
 npm run lint
 npm test
+Pop-Location
 ```
 
 GitHub Actions runs the backend lint and tests against PostgreSQL and checks the Docker Compose build on pull requests to `main`.
@@ -102,4 +121,3 @@ frontend/      React + Vite web application
 docker-compose.yml  Local multi-service setup
 .env.example   Example environment configuration
 ```
-
