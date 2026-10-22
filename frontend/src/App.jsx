@@ -493,7 +493,7 @@ export default function App() {
 
   return <div className="shell">
     <aside className="sidebar">
-      <div className="brand"><b>?</b><span><strong>campus<span>store</span></strong><small>SALES TRACKER</small></span></div>
+      <div className="brand"><b className="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M3 9.5h18L19.5 4h-15L3 9.5Z" /><path d="M4 9.5v10h16v-10" /><path d="M3 9.5c0 1.7 1.2 2.8 2.5 2.8S8 11.2 8 9.5c0 1.7 1.2 2.8 2.5 2.8s2.5-1.1 2.5-2.8c0 1.7 1.2 2.8 2.5 2.8s2.5-1.1 2.5-2.8c0 1.7 1.2 2.8 2.5 2.8S21 11.2 21 9.5" /><path d="M9 19.5v-5h6v5" /></svg></b><span><strong>campus<span>store</span></strong><small>SALES TRACKER</small></span></div>
       <p>WORKSPACE</p>
       {['Overview', 'Products', 'Sales'].map(name => <button key={name} className={'nav ' + (page === name ? 'active' : '')} onClick={() => setPage(name)}>{name}</button>)}
       <div className="profile"><b>CO</b><span><strong>Cecilia Obeng</strong><small>Store manager</small></span></div>
