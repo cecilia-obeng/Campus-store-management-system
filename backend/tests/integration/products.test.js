@@ -169,10 +169,12 @@ describe('create, get, update and delete', () => {
   });
 
   it('keeps the unit_price of past sales when the product price changes (T-05)', async () => {
-    await request(app)
+    const res = await request(app)
       .put('/api/products/1')
       .send({ name: 'Cola', category_id: 1, price: 99, stock_quantity: 50 });
 
+    expect(res.status).toBe(200);
+    expect(res.body.data.price).toBe(99);
     const { rows } = await db.query('SELECT DISTINCT unit_price FROM sales WHERE product_id = 1');
     expect(rows).toEqual([{ unit_price: '10.00' }]);
   });

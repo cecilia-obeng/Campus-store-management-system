@@ -54,10 +54,12 @@ describe('POST /api/sales: recording a sale', () => {
       .post('/api/sales')
       .send({ ...SALE, unit_price: 0.01, total: 0.02 });
 
+    expect(res.status).toBe(201);
     expect(res.body.data.unit_price).toBe(10);
     expect(res.body.data.total).toBe(20);
     const { rows } = await db.query('SELECT unit_price FROM sales WHERE id = 4');
     expect(rows[0].unit_price).toBe('10.00');
+    expect(await stockOf(1)).toBe(48);
   });
 
   it('uses the sale_date sent, or now when there is none', async () => {
