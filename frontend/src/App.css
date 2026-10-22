@@ -11,3 +11,66 @@
 
 .required-marker{color:#a23e39;font-weight:700}.pagination{display:flex;justify-content:center;align-items:center;gap:14px;margin:18px 0}.pagination button{border:1px solid #dfe6e1;background:#fff;border-radius:6px;padding:7px 11px;color:#426b54;font-size:10px}.pagination button:disabled{opacity:.5;cursor:not-allowed}.pagination span{font-size:10px;color:#657169}
 @media(max-width:700px){.filters:not(.sale-filters):not(.summary-filters){flex-wrap:wrap}.filters:not(.sale-filters):not(.summary-filters)>input{flex:1 1 160px;width:auto}.filters:not(.sale-filters):not(.summary-filters)>select{flex:1 1 135px;min-width:0}.filters:not(.sale-filters):not(.summary-filters)>.toggle{flex:1 1 140px}.filters:not(.sale-filters):not(.summary-filters)>span{margin-left:0}.dialog{max-height:calc(100vh - 30px);overflow:auto}}
+
+/* Readability and brand polish */
+.brand>b.brand-mark{width:42px;height:42px;flex:0 0 42px}
+.brand-mark svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.brand strong{font-size:18px}
+.brand small{font-size:11px}
+.sidebar>p{font-size:12px}
+.nav{font-size:14px}
+.nav i{font-size:18px}
+.profile>b{font-size:12px}
+.profile span{font-size:12px}
+.profile small{font-size:11px}
+header{font-size:13px}
+header label{font-size:11px}
+.heading small{font-size:12px}
+.heading p{font-size:14px}
+.primary{font-size:13px}
+.metric>div{font-size:13px}
+.metric>small{font-size:12px}
+.panel-title h2{font-size:15px}
+.panel-title small{font-size:12px}
+.revenue small{font-size:12px}
+.days{font-size:11px}
+.alert{font-size:13px}
+.link{font-size:13px}
+.th{font-size:11px}
+.tr{font-size:12px}
+.tr em{font-size:11px}
+.sale{font-size:13px}
+.sale small{font-size:12px}
+.footnote,footer{font-size:11px}
+.filters input,.filters select{font-size:13px}
+.filters span,.filters .toggle{font-size:12px}
+.connection-banner,.error-banner{font-size:13px}
+.dialog p{font-size:13px}
+.dialog label{font-size:13px}
+.dialog input,.dialog select{font-size:14px}
+.actions>button:first-child{font-size:13px}
+.toast{font-size:13px}
+.product-card-top{font-size:12px}
+.product-card h3{font-size:16px}
+.product-card>p{font-size:13px}
+.product-card em{font-size:12px}
+.card-actions button,.sale-actions button,.sale-filters>button{font-size:12px}
+.sale-filters label{font-size:12px}
+.sale-filters input,.sale-filters select{font-size:13px}
+.form-error{font-size:13px}
+.form-hint{font-size:12px}
+.field-error{font-size:12px}
+.state{font-size:14px}
+.state button{font-size:12px}
+.pagination button,.pagination span{font-size:13px}
+@media(max-width:700px){
+  .sidebar{width:132px;padding:16px 8px}
+  main{margin-left:132px}
+  .brand{padding:0 2px 25px}
+  .brand>span,.profile span{display:none}
+  .sidebar>p{padding-left:6px}
+  .nav{font-size:12px;justify-content:flex-start;padding:0 8px}
+  .nav i{font-size:18px}
+  .heading p{font-size:13px}
+  .heading .primary{font-size:12px}
+}
