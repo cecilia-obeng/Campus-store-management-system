@@ -13,6 +13,9 @@
     "dotenv": "^18.0.7",
     "express": "^5.3.0",
     "pg": "^8.23.1",
+    "swagger-ui-dist": "5.33.1",
+    "swagger-ui-express": "^5.0.1",
+    "yaml": "^2.9.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -21,5 +24,8 @@
     "globals": "^17.13.0",
     "supertest": "^7.3.1",
     "vitest": "^4.1.11"
+  },
+  "scarfSettings": {
+    "enabled": false
   }
 }
