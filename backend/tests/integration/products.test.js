@@ -60,7 +60,7 @@ describe('GET /api/products: filtering and pagination', () => {
     expect(names(res)).toEqual(['Chips', 'Gum']);
   });
 
-  it('filters by low stock, counting stock equal to the reorder level as low', async () => {
+  it('filters by low stock, counting stock equal to the reorder level as low (T-19)', async () => {
     const low = await request(app).get('/api/products?low_stock=true');
     const notLow = await request(app).get('/api/products?low_stock=false');
 
@@ -68,7 +68,7 @@ describe('GET /api/products: filtering and pagination', () => {
     expect(names(notLow)).toEqual(['Cola', 'Gum']);
   });
 
-  it('combines search, category, low stock and sort', async () => {
+  it('combines search, category, low stock and sort (T-06)', async () => {
     const drinks = await request(app).get('/api/products?search=a&category_id=1&sort=-price');
     const lowDrinks = await request(app).get(
       '/api/products?search=a&category_id=1&low_stock=true&sort=-price',
@@ -103,7 +103,7 @@ describe('GET /api/products: filtering and pagination', () => {
 });
 
 describe('create, get, update and delete', () => {
-  it('creates a product: 201, Location header, trimmed name, default reorder level', async () => {
+  it('creates a product: 201, Location header, trimmed name, default reorder level (T-01)', async () => {
     const res = await request(app)
       .post('/api/products')
       .send({ ...PEN, name: '  Pilot Pen Blue  ', unknown_field: true });
@@ -128,7 +128,7 @@ describe('create, get, update and delete', () => {
     expect(res.body.data).toMatchObject({ id: 2, name: 'Water', price: 5, is_low_stock: true });
   });
 
-  it('returns 404 for a product that does not exist, and 400 for an id that is not a number', async () => {
+  it('returns 404 for a product that does not exist, and 400 for an id that is not a number (T-20)', async () => {
     const missing = await request(app).get('/api/products/999');
     const notANumber = await request(app).get('/api/products/abc');
 
@@ -168,7 +168,7 @@ describe('create, get, update and delete', () => {
     expect(res.body.data.created_at).toBe('2026-01-01T00:00:00.000Z');
   });
 
-  it('keeps the unit_price of past sales when the product price changes', async () => {
+  it('keeps the unit_price of past sales when the product price changes (T-05)', async () => {
     await request(app)
       .put('/api/products/1')
       .send({ name: 'Cola', category_id: 1, price: 99, stock_quantity: 50 });
@@ -183,7 +183,7 @@ describe('create, get, update and delete', () => {
     expect(res.status).toBe(404);
   });
 
-  it('marks a product low on stock when stock equals the reorder level', async () => {
+  it('marks a product low on stock when stock equals the reorder level (T-19)', async () => {
     const res = await request(app)
       .put('/api/products/1')
       .send({ name: 'Cola', category_id: 1, price: 10, stock_quantity: 10, reorder_level: 10 });
@@ -191,7 +191,7 @@ describe('create, get, update and delete', () => {
     expect(res.body.data.is_low_stock).toBe(true);
   });
 
-  it('deletes a product that was never sold: 204, then 404', async () => {
+  it('deletes a product that was never sold: 204, then 404 (T-08)', async () => {
     const res = await request(app).delete('/api/products/4');
     const after = await request(app).get('/api/products/4');
 
@@ -202,7 +202,7 @@ describe('create, get, update and delete', () => {
 });
 
 describe('invalid category and validation errors', () => {
-  it('rejects a category that does not exist, on the category_id field', async () => {
+  it('rejects a category that does not exist, on the category_id field (T-04)', async () => {
     const res = await request(app)
       .post('/api/products')
       .send({ ...PEN, category_id: 999 });
@@ -224,7 +224,7 @@ describe('invalid category and validation errors', () => {
     expect(res.body.error.details[0].field).toBe('category_id');
   });
 
-  it('reports every invalid field at once', async () => {
+  it('reports every invalid field at once (T-03)', async () => {
     const res = await request(app)
       .post('/api/products')
       .send({ name: 'X', category_id: 1, price: -1, stock_quantity: 1.5 });
@@ -264,7 +264,7 @@ describe('invalid category and validation errors', () => {
     expect(text.body.error.details).toEqual([{ field: 'price', message: 'Price must be a number.' }]);
   });
 
-  it('answers broken JSON with 400 INVALID_JSON', async () => {
+  it('answers broken JSON with 400 INVALID_JSON (T-20)', async () => {
     const res = await request(app)
       .post('/api/products')
       .set('Content-Type', 'application/json')
@@ -276,7 +276,7 @@ describe('invalid category and validation errors', () => {
 });
 
 describe('duplicate names', () => {
-  it('refuses a name that already exists in a different case: 409 DUPLICATE', async () => {
+  it('refuses a name that already exists in a different case: 409 DUPLICATE (T-02)', async () => {
     const res = await request(app)
       .post('/api/products')
       .send({ ...PEN, name: 'cOLA' });
@@ -298,7 +298,7 @@ describe('duplicate names', () => {
   });
 });
 
-describe('deleting a product that has sales', () => {
+describe('deleting a product that has sales (T-07)', () => {
   it('refuses with 409 IN_USE and the number of sales, and keeps the product', async () => {
     const res = await request(app).delete('/api/products/1');
     const after = await request(app).get('/api/products/1');
