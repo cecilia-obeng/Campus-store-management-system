@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Campus Store API",
-    "description": "Smoke test for every minimum case in dev_docs/05-api-reference.md Section 10 (CS-26).\n\nRun the whole collection in order (Run collection, or `npx newman run backend/campus-store.postman_collection.json`). It creates its own product and sells only that product, so it can be run again and again on any data. Set baseUrl to the API (default http://localhost:8000/api).\n\nNot covered yet: GET /api/summary (added with CS-60).",
+    "description": "Smoke test for every endpoint in dev_docs/05-api-reference.md and every minimum case in its Section 10 (CS-26, CS-63).\n\nRun the whole collection in order (Run collection, or `npx newman run backend/campus-store.postman_collection.json`). It creates its own product and sells only that product, so it can be run again and again on any data. Set baseUrl to the API (default http://localhost:8000/api).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -36,11 +36,23 @@
     {
       "key": "forgedSaleId",
       "value": ""
+    },
+    {
+      "key": "ordersBefore",
+      "value": ""
+    },
+    {
+      "key": "revenueBefore",
+      "value": ""
+    },
+    {
+      "key": "summarySaleId",
+      "value": ""
     }
   ],
   "item": [
     {
-      "name": "1. Health and errors",
+      "name": "1. Health, categories and errors",
       "item": [
         {
           "name": "GET /health -> 200 ok",
@@ -56,6 +68,27 @@
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
                   "pm.test('database ok', () => pm.expect(pm.response.json()).to.eql({ status: 'ok', database: 'ok' }));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /categories -> 200, sorted by name",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/categories"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const names = pm.response.json().data.map((c) => c.name);",
+                  "pm.test('sorted by name', () => pm.expect(names).to.eql([...names].sort((a, b) => a.localeCompare(b))));",
+                  "pm.test('product_count is a number', () => pm.expect(pm.response.json().data[0].product_count).to.be.a('number'));"
                 ]
               }
             }
@@ -149,6 +182,26 @@
                   "pm.test('status 201', () => pm.response.to.have.status(201));",
                   "pm.test('Location header', () => pm.response.to.have.header('Location', '/api/products/' + pm.response.json().data.id));",
                   "pm.collectionVariables.set('productId', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /products/:id -> 200",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/products/{{productId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('the product just created', () => pm.expect(pm.response.json().data.name).to.eql(pm.collectionVariables.get('productName')));",
+                  "pm.test('price is a number', () => pm.expect(pm.response.json().data.price).to.eql(20));"
                 ]
               }
             }
@@ -414,6 +467,36 @@
           ]
         },
         {
+          "name": "PUT /products/:id new price -> 200",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/products/{{spareId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Spare {{productName}}\",\n  \"category_id\": 6,\n  \"price\": 2.5,\n  \"stock_quantity\": 1\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('price changed to 2.5', () => pm.expect(pm.response.json().data.price).to.eql(2.5));",
+                  "pm.test('reorder_level back to the default 10', () => pm.expect(pm.response.json().data.reorder_level).to.eql(10));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "DELETE /products/:id never sold -> 204",
           "request": {
             "method": "DELETE",
@@ -499,6 +582,47 @@
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
                   "pm.test('stock is ' + (Number(pm.collectionVariables.get('stockBefore')) - 2), () => pm.expect(pm.response.json().data.stock_quantity).to.eql(Number(pm.collectionVariables.get('stockBefore')) - 2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /sales/:id -> 200",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/sales/{{saleId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const sale = pm.response.json().data;",
+                  "pm.test('quantity 2, total = 2 x 20', () => { pm.expect(sale.quantity).to.eql(2); pm.expect(sale.total).to.eql(40); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /sales?product_id= -> only this product",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/sales?product_id={{productId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('every sale is for this product', () => body.data.forEach((s) => pm.expect(s.product_id).to.eql(Number(pm.collectionVariables.get('productId')))));",
+                  "pm.test('has meta for paging', () => pm.expect(body.meta).to.include.keys('page', 'limit', 'total'));"
                 ]
               }
             }
@@ -741,6 +865,181 @@
                 "exec": [
                   "pm.test('status 409', () => pm.response.to.have.status(409));",
                   "pm.test('error code IN_USE', () => pm.expect(pm.response.json().error.code).to.eql('IN_USE'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Summary",
+      "item": [
+        {
+          "name": "GET /summary -> 200, figures before",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/summary"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('every figure is a number', () => ['total_revenue', 'total_orders', 'average_order_value', 'total_units_sold', 'low_stock_count'].forEach((k) => pm.expect(d[k]).to.be.a('number')));",
+                  "pm.test('top_products has at most 5', () => pm.expect(d.top_products.length).to.be.at.most(5));",
+                  "pm.collectionVariables.set('ordersBefore', d.total_orders);",
+                  "pm.collectionVariables.set('revenueBefore', d.total_revenue);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /sales 1 x 20.00 for the summary",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/sales",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": {{productId}},\n  \"quantity\": 1,\n  \"payment_method\": \"card\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('summarySaleId', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /summary -> orders +1, revenue +20",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/summary"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data;",
+                  "pm.test('orders +1', () => pm.expect(d.total_orders).to.eql(Number(pm.collectionVariables.get('ordersBefore')) + 1));",
+                  "pm.test('revenue +20.00', () => pm.expect(d.total_revenue.toFixed(2)).to.eql((Number(pm.collectionVariables.get('revenueBefore')) + 20).toFixed(2)));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /summary/daily -> 7 days ending today (UTC)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/summary/daily"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const days = pm.response.json().data;",
+                  "pm.test('7 days, oldest first', () => { pm.expect(days.length).to.eql(7); pm.expect(days.map((d) => d.date)).to.eql(days.map((d) => d.date).sort()); });",
+                  "pm.test('last day is today in UTC', () => pm.expect(days[6].date).to.eql(new Date().toISOString().slice(0, 10)));",
+                  "pm.test('today has the sale just recorded', () => pm.expect(days[6].orders).to.be.at.least(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /summary/daily?days=91 -> 400",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/summary/daily?days=91"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on days', () => pm.expect(pm.response.json().error.details[0].field).to.eql('days'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /summary from after to -> 400",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/summary?from=2026-10-10&to=2026-10-01"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on from', () => pm.expect(pm.response.json().error.details[0].field).to.eql('from'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE the summary sale -> 204",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/sales/{{summarySaleId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /summary -> figures back to before",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/summary"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data;",
+                  "pm.test('orders back', () => pm.expect(d.total_orders).to.eql(Number(pm.collectionVariables.get('ordersBefore'))));",
+                  "pm.test('revenue back', () => pm.expect(d.total_revenue.toFixed(2)).to.eql(Number(pm.collectionVariables.get('revenueBefore')).toFixed(2)));"
                 ]
               }
             }

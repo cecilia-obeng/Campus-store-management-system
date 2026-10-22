@@ -150,6 +150,7 @@ paths:
         content:
           application/json:
             schema: { $ref: '#/components/schemas/ProductInput' }
+            example: { name: Pilot Pen Blue, category_id: 6, price: 5, stock_quantity: 120, reorder_level: 20 }
       responses:
         '200':
           description: Updated
@@ -511,11 +512,11 @@ components:
       type: object
       required: [product_id, product_name, category_name, units_sold, revenue]
       properties:
-        product_id: { type: integer }
-        product_name: { type: string }
-        category_name: { type: string }
-        units_sold: { type: integer }
-        revenue: { type: number, format: double }
+        product_id: { type: integer, example: 6 }
+        product_name: { type: string, example: Campus Hoodie }
+        category_name: { type: string, example: Campus Merchandise }
+        units_sold: { type: integer, example: 20 }
+        revenue: { type: number, format: double, example: 2900 }
 
     Summary:
       type: object
