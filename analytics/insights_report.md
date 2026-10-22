@@ -63,19 +63,18 @@ Sample sale-row counts were **cash 67**, **card 67**, and **mobile money 66**. R
 
 ## 3. Metric consistency and safeguards
 
-The project follows screenshot **05 §7.2** definitions for the API, SQL and Power BI. Sales periods start at `from` 00:00 UTC and end *before* (`to + 1 day`) 00:00 UTC. The API must return HTTP 400 for an invalid date or `from > to` (the API is outside this Sprint 2 deliverable). If no sales exist in the period, return revenue 0, order rows 0, average row value 0, and units 0. `low_stock_count` remains the current inventory count.
+The metric definitions are documented in `dev_docs/05`, Section 7.2, and are used to keep the SQL, `GET /api/summary`, and Power BI results consistent. Sales periods start at `from` 00:00 UTC and end *before* (`to + 1 day`) 00:00 UTC. The API must return HTTP 400 for an invalid date or `from > to`. If no sales exist in the period, return revenue 0, order rows 0, average row value 0, and units 0. `low_stock_count` remains the current inventory count, regardless of the sales date filter.
 
-SQL scripts use the PostgreSQL tables `sales`, `products`, `categories`; the Power BI semantic model joins `Sales.product_id → Products.id`, `Products.category_id → Categories.id`, and `Sales.sale_utc_date → Dates.Date`. Each sale is counted once, with one-way relationships, to avoid fan-out inflation.
-
+The PostgreSQL schema (`database/init.sql`) defines three tables: `sales`, `products`, and `categories` (loaded into Power BI as `public sales`, `public products`, and `public categories`). Its foreign keys are `sales.product_id → products.id` and `products.category_id → categories.id`; these are the correct keys for relating the corresponding tables in Power BI. Sales timestamps are stored in `sales.sale_date` (`TIMESTAMPTZ`). Apply UTC reporting periods to `sales.sale_date`, count each `sales.id` once, and avoid duplicate sale rows when joining tables. The SQL files establish the database relationships; the saved `.pbix` model should be checked separately to confirm its relationships match.
 ### Reproducibility and limits
 
 - Reference results were calculated independently from the deterministic loops in `database/seed.sql`; the original file itself checks **6 categories, 24 products, 200 sales, 402 units sold, 2,043 remaining units, and revenue 12,549.50**.
-- The uploaded files are **schema and seed scripts**, not a connected PostgreSQL server or a live database dump. The report is demonstrative until refreshed against a running database.
-- The generated Power BI PBIP is a source-code project requiring Power BI Desktop and a PostgreSQL connection. The PNG is a static reference rendering, not evidence of a successfully refreshed `.pbix`.
-- Before closing CS-71 and CS-72, compare `analytics/sql/kpi_summary.sql` with the live `GET /api/summary` response for the *same UTC range and DB snapshot*, test an empty range, and inspect the Power BI data model for exactly one row per sale ID.
+- These findings describe the reproducible seeded sample, not production trading data. The reference timestamp matters because `database/seed.sql` generates sale timestamps relative to `CURRENT_TIMESTAMP`; reseeding at another time can shift monthly totals.
+- The Power BI deliverable is a `.pbix` report. The supplied Power BI screenshots show the same all-time KPI figures and top-five products as the checked seed/SQL results; they are evidence of what was displayed in the report, not a substitute for a new refresh after future data changes.
+- Reviewers confirmed that both SQL files reproduce Findings 1–5 from a fresh seed, and that `analytics/sql/kpi_summary.sql` and the Finding 3 top five match `GET /api/summary` for both all time and September. Retain the same database snapshot and UTC date boundaries when repeating these checks. An empty-range API test and a check for one row per sale ID remain useful safeguards.
 
 ## 4. Reproducing and checking the findings
 
 Run `analytics/sql/insights_report.sql` against the PostgreSQL database in the repository. The script contains six **SELECT-only** result sets for the five findings, follows the §7.2 definitions, and uses current stock for replenishment alerts. It defaults to **all sales in the database**, matching the report figures only for the unchanged original seed. If the data changes or is reseeded on another day, rerun the SQL and update the findings, including monthly dates. When analysing a selected period, apply the **same UTC inclusive start / exclusive next-day end** date filter to every sales-based query; never apply it to current stock.
 
-**Issue #35 acceptance:** Five findings with numeric support and three recommendations are presented here. Live data reconciliation, review, and the project Definition of Done should be completed before closing the issue.
+**Issue #35 acceptance:** Five findings with numeric support and three recommendations are presented here. The reviewers have confirmed seed, SQL, API, and screenshot figure consistency; remaining PR review requirements and the project Definition of Done must still be satisfied before closing the issue.
