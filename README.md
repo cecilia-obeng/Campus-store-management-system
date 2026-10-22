@@ -42,20 +42,36 @@ Keep the terminal open while the services run. Press `Ctrl+C` to stop them. The 
 
 ## API
 
-Base URL: `http://localhost:8000/api`
+Base URL: `http://localhost:8000/api`, once the stack is running (see [Run with Docker Compose](#run-with-docker-compose)).
 
-| Method | Endpoint | Purpose |
-|---|---|---|
-| GET | `/health` | Check API and database availability |
-| GET | `/categories` | List categories |
-| GET, POST | `/products` | List/search/filter products; create a product |
-| GET, PUT, DELETE | `/products/:id` | Read, update, or delete a product |
-| GET, POST | `/sales` | List sales; record a sale |
-| GET, PUT, DELETE | `/sales/:id` | Read, correct, or cancel a sale |
-| GET | `/summary` | Retrieve dashboard KPIs |
-| GET | `/summary/daily?days=7` | Retrieve daily sales totals |
+- **Interactive docs (Swagger UI):** <http://localhost:8000/api/docs>
+- **Full contract:** [API reference](dev_docs/05-api-reference.md) and [OpenAPI specification](dev_docs/openapi.yaml)
+- **Postman collection:** [backend/campus-store.postman_collection.json](backend/campus-store.postman_collection.json) (import it, or run `npx newman run backend/campus-store.postman_collection.json`)
 
-The API validates inputs and returns JSON errors. Recording a sale and reducing stock happen together; the API rejects a sale when stock is insufficient. See the [API reference](dev_docs/05-api-reference.md) and [OpenAPI specification](dev_docs/openapi.yaml) for request and response details.
+| # | Method | Path | Purpose | Success | Errors |
+|---|--------|------|---------|---------|--------|
+| 1 | GET | `/api/health` | API and DB availability | 200 | 503 |
+| 2 | GET | `/api/categories` | Categories for filters and forms | 200 | n/a |
+| 3 | GET | `/api/products` | List, search, filter, sort, paginate | 200 | 400 |
+| 4 | GET | `/api/products/:id` | One product | 200 | 400, 404 |
+| 5 | POST | `/api/products` | Create product | 201 | 400, 409 |
+| 6 | PUT | `/api/products/:id` | Update product (full replace) | 200 | 400, 404, 409 |
+| 7 | DELETE | `/api/products/:id` | Delete product (no sales only) | 204 | 400, 404, 409 |
+| 8 | GET | `/api/sales` | Sales history with filters | 200 | 400 |
+| 9 | GET | `/api/sales/:id` | One sale | 200 | 400, 404 |
+| 10 | POST | `/api/sales` | Record a sale; stock decreases | 201 | 400, 404, 409 |
+| 11 | PUT | `/api/sales/:id` | Correct a sale; stock adjusts by the difference | 200 | 400, 404, 409 |
+| 12 | DELETE | `/api/sales/:id` | Cancel a sale; stock restored | 204 | 400, 404 |
+| 13 | GET | `/api/summary` | Dashboard KPIs | 200 | 400 |
+| 14 | GET | `/api/summary/daily` | Revenue per day for the chart (stretch, 05 Section 9.2) | 200 | 400 |
+
+The API validates inputs and returns JSON errors. Recording a sale and reducing stock happen together; the API rejects a sale when stock is insufficient.
+
+Example:
+
+```bash
+curl -s "http://localhost:8000/api/summary?from=2026-10-01&to=2026-10-31"
+```
 
 ## Database and sample data
 
