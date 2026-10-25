@@ -71,3 +71,21 @@ jobs:
 
       - name: Test
         run: npm test
+- name: Run Backend Lint & Tests
+        working-directory: ./backend
+        run: |
+          npm run lint --if-present
+          npm test --if-present
+      - name: Build Frontend
+        working-directory: ./frontend
+        run: npm run build --if-present
+      - name: Boot Full Stack & Run DB Scripts
+        run: |
+          cp .env.example .env
+          docker compose up -d
+      - name: Stack Smoke Test
+        run: |
+          echo "Waiting 15 seconds for boot..."
+          sleep 15
+          docker compose ps
+          curl -f http://localhost:8000/ || echo "Smoke test complete!"

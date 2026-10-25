@@ -23,6 +23,8 @@ services:
     environment:
       - PORT=8000
       - DATABASE_URL=${DATABASE_URL:-postgresql://store_admin:local_secret_password@db:5432/campus_store}
+      - NODE_ENV=${NODE_ENV}
+      - CORS_ORIGIN=${CORS_ORIGIN}
     volumes:
       - ./backend:/app
       - /app/node_modules
